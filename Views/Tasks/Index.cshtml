@@ -1,0 +1,76 @@
+@model TaskListViewModel
+@{
+    ViewData["Title"] = "Görevler";
+}
+
+<div class="page-heading">
+    <div>
+        <p class="eyebrow">PROJE</p>
+        <h1>@Model.ProjectName</h1>
+        <p class="muted">Görevlerini ekle, durumlarını güncelle ve tamamlananları takip et.</p>
+    </div>
+    <a class="button primary" asp-action="Create">+ Yeni görev</a>
+</div>
+
+@if (TempData["Success"] is string success)
+{
+    <div class="message success" role="status">@success</div>
+}
+@if (TempData["Error"] is string error)
+{
+    <div class="message error" role="alert">@error</div>
+}
+
+<section class="card">
+    <div class="section-heading">
+        <h2>Görevler</h2>
+        <span class="count">@Model.Tasks.Count görev</span>
+    </div>
+
+    @if (Model.Tasks.Count == 0)
+    {
+        <div class="empty-state">
+            <h3>Henüz görev yok</h3>
+            <p>İlk görevini ekleyerek projeni planlamaya başla.</p>
+            <a class="button primary" asp-action="Create">Görev ekle</a>
+        </div>
+    }
+    else
+    {
+        <div class="task-list">
+            @foreach (var task in Model.Tasks)
+            {
+                <article class="task-row">
+                    <div class="task-main">
+                        <div class="task-meta">
+                            <span class="badge">@task.Priority</span>
+                            <span class="muted">@task.CreatedDate.ToString("dd.MM.yyyy")</span>
+                        </div>
+                        <h3>@task.Title</h3>
+                        @if (!string.IsNullOrWhiteSpace(task.Description))
+                        {
+                            <p>@task.Description</p>
+                        }
+                    </div>
+                    <div class="task-actions">
+                        <form asp-action="UpdateStatus" method="post" class="status-form">
+                            <input type="hidden" name="gorevId" value="@task.Id" />
+                            <label for="status-@task.Id">Durum</label>
+                            <select id="status-@task.Id" name="yeniDurum">
+                                @foreach (var status in Enum.GetValues<Status>())
+                                {
+                                    <option value="@status" selected="@(task.Status == status)">@status</option>
+                                }
+                            </select>
+                            <button class="button subtle" type="submit">Kaydet</button>
+                        </form>
+                        <form asp-action="Delete" method="post">
+                            <input type="hidden" name="gorevId" value="@task.Id" />
+                            <button class="button danger" type="submit">Sil</button>
+                        </form>
+                    </div>
+                </article>
+            }
+        </div>
+    }
+</section>
