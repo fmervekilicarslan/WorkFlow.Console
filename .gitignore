@@ -3,3 +3,6 @@ obj/
 .idea/
 .vs/
 *.user
+# Yerel proje yönergeleri ve hafıza dosyaları
+AGENTS.md
+PROJECT_MEMORY.md

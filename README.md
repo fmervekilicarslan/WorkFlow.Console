@@ -1,35 +1,74 @@
-# WorkFlow.Mvc
+# WorkFlow – Task Management Application
 
-Bu ASP.NET Core MVC projesi, `../WorkFlow.Console/WorkFlow.Console_v0.3` içindeki görev yönetimi örneğinin web karşılığıdır. İki proje `RiderProjects` altında yan yana durur.
+WorkFlow, görevlerin oluşturulmasını, listelenmesini ve yönetilmesini sağlayan, **C# ve ASP.NET Core MVC** kullanılarak geliştirilmiş bir görev yönetimi uygulamasıdır.
 
-## Çalıştırma
+Bu proje, nesne yönelimli programlama prensiplerini ve ASP.NET Core MVC mimarisini uygulamalı olarak öğrenmek amacıyla geliştirilmektedir.
 
-.NET 10 SDK kurulu olmalıdır. `RiderProjects` klasöründe:
+## Kullanılan Teknolojiler
 
-```powershell
-dotnet run --project WorkFlow.Mvc/WorkFlow.Mvc.csproj
-```
+- **C#**
+- **.NET 10**
+- **ASP.NET Core MVC**
+- **Razor Views**
+- **HTML ve CSS**
+- **Git ve GitHub**
 
-Terminalde yazan yerel adresi tarayıcıda aç. Rider kullanıyorsan `RiderProjects/WorkFlow.sln` dosyasını açıp başlangıç projesi olarak `WorkFlow.Mvc` seçebilirsin.
+## Projenin Özellikleri
 
-## Sınıflar ne yapıyor?
+- Yeni görev oluşturma
+- Mevcut görevleri listeleme
+- Görev silme
+- Görev durumunu güncelleme
+- Görevlere öncelik ve tarih bilgisi atama
+- Form doğrulama ve hata yönetimi
 
-| Parça | Sorumluluğu |
-| --- | --- |
-| `TaskItem` | Tek bir görevin başlığını, açıklamasını, önceliğini, durumunu ve tarihlerini tutar. |
-| `Project` | Görevleri `Guid` anahtarlı bir sözlük içinde tutar. |
-| `Priority`, `Status` | Seçilebilecek öncelik ve durum değerlerini sınırlar. |
-| `ITaskService` | Görev işlemlerinin sözleşmesini tanımlar. |
-| `TaskService` | Görev ekleme, silme, durum değiştirme ve listeleme kurallarını uygular. |
-| `GecersizGorevException` | Görevle ilgili iş kuralı hatalarını ifade eder. |
-| `TasksController` | Tarayıcıdan gelen isteği alır, servisi çağırır ve uygun görünümü döndürür. |
-| `TaskCreateViewModel` | Görev ekleme formundaki alanları ve doğrulama kurallarını taşır. |
-| `Views/Tasks` | Kullanıcının gördüğü HTML sayfalarını oluşturur. |
+## Proje Mimarisi
 
-## MVC akışı
+Uygulama, ASP.NET Core MVC mimarisine uygun olarak katmanlara ayrılmıştır.
 
-Örneğin görev eklerken tarayıcı formu `TasksController.Create` eylemine gönderir. Controller, form modelinin geçerli olup olmadığını kontrol eder, `TaskItem` oluşturur ve `ITaskService.GorevEkle` metodunu çağırır. Servis görevi `Project` içindeki sözlüğe koyar. Sonra controller liste sayfasına yönlendirir. Böylece **gösterim**, **istek yönetimi** ve **iş kuralları** ayrı yerlerde kalır.
+| Katman | Açıklama |
+|---|---|
+| Models | Görev ve proje verilerini temsil eder. |
+| Views | Kullanıcının etkileşim kurduğu web sayfalarını oluşturur. |
+| Controllers | HTTP isteklerini karşılar ve uygulama akışını yönetir. |
+| Services | Görev yönetimiyle ilgili iş kurallarını uygular. |
+| Interfaces | Servislerin uyması gereken sözleşmeleri tanımlar. |
+| ViewModels | Form verilerini ve doğrulama kurallarını yönetir. |
+| Enums | Görev önceliği ve durum değerlerini tanımlar. |
+| Exceptions | Uygulamaya özgü hata durumlarını temsil eder. |
 
-MVC ve console sürümleri aynı sınıf adlarını ve temel yapıyı kullanır, ancak kendi nesneleri vardır. Görevler yalnızca çalışan uygulamanın belleğinde saklanır; uygulama yeniden başlayınca silinir. Kalıcı saklama ileride veritabanı eklenerek yapılabilir.
+## Kurulum ve Çalıştırma
 
-Yeni bir değişikliğe başlamadan önce `RiderProjects/AGENTS.md` ve `RiderProjects/PROJECT_MEMORY.md` dosyalarını oku.
+Projeyi çalıştırabilmek için bilgisayarınızda **.NET 10 SDK** kurulu olmalıdır.
+
+1. Repository'yi bilgisayarınıza klonlayın:
+
+   ```bash
+   git clone https://github.com/fmervekilicarslan/WorkFlow.Console.git
+   ```
+
+2. Proje klasörüne geçin:
+
+   ```bash
+   cd WorkFlow.Console
+   ```
+
+3. MVC uygulamasını başlatın:
+
+   ```bash
+   dotnet run --project WorkFlow.Mvc.csproj
+   ```
+
+4. Terminalde belirtilen yerel adresi tarayıcıda açın.
+
+## Veri Saklama
+
+Uygulama şu anda görevleri bellekte saklamaktadır. Bu nedenle uygulama kapatıldığında görev verileri korunmaz.
+
+Kalıcı veri saklama için ilerleyen aşamalarda veritabanı entegrasyonu yapılabilir.
+
+## Geliştirme Durumu
+
+WorkFlow, yazılım geliştirme stajı kapsamında üzerinde çalışılmaya devam edilen bir öğrenme ve uygulama projesidir.
+
+Projenin geliştirilmesi sırasında MVC mimarisi, Dependency Injection, servis katmanı, HTTP istekleri ve Git sürüm kontrolü gibi konular üzerinde çalışılmaktadır.
