@@ -1,0 +1,32 @@
+@model TaskFormViewModel
+<div asp-validation-summary="All" class="validation" role="alert"></div>
+<div class="field">
+    <label asp-for="Title"></label>
+    <input asp-for="Title" maxlength="120" required aria-describedby="title-help title-error" />
+    <small id="title-help">Kısa ve açıklayıcı bir başlık yazın. En fazla 120 karakter.</small>
+    <span id="title-error" asp-validation-for="Title" class="validation"></span>
+</div>
+<div class="field">
+    <label asp-for="Description"></label>
+    <textarea asp-for="Description" rows="5" maxlength="1000" aria-describedby="description-help description-error"></textarea>
+    <small id="description-help">İsteğe bağlı. En fazla 1000 karakter.</small>
+    <span id="description-error" asp-validation-for="Description" class="validation"></span>
+</div>
+<div class="field-grid">
+    <div class="field">
+        <label asp-for="Priority"></label>
+        <select asp-for="Priority" asp-items="Html.GetEnumSelectList<Priority>()" aria-describedby="priority-error"></select>
+        <span id="priority-error" asp-validation-for="Priority" class="validation"></span>
+    </div>
+    <div class="field">
+        <label asp-for="Status"></label>
+        <select asp-for="Status" asp-items="Html.GetEnumSelectList<Status>()" aria-describedby="status-error"></select>
+        <span id="status-error" asp-validation-for="Status" class="validation"></span>
+    </div>
+</div>
+<div class="field">
+    <label asp-for="DueDate"></label>
+    <input asp-for="DueDate" type="date" min="1900-01-01" max="9998-12-31" aria-describedby="due-help due-error" />
+    <small id="due-help">İsteğe bağlı. Türkiye saatiyle seçilen günün sonuna kadar.</small>
+    <span id="due-error" asp-validation-for="DueDate" class="validation"></span>
+</div>

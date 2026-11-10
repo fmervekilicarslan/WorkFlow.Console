@@ -51,3 +51,28 @@ input:focus, textarea:focus, select:focus { outline: 2px solid #93c5fd; border-c
 .error-page { margin-top: 48px; padding: 32px; }
 @media (max-width: 800px) { .task-row { flex-direction: column; gap: 20px; } .task-actions { flex-wrap: wrap; } }
 @media (max-width: 520px) { .shell { width: min(100% - 24px, 1100px); } .page-heading { align-items: start; flex-direction: column; margin-top: 32px; } .field-grid { grid-template-columns: 1fr; gap: 0; } .status-form { flex-wrap: wrap; } .header-caption { display: none; } }
+.task-summary, .task-filters { display: flex; flex-wrap: wrap; gap: 16px; padding: 20px 26px; align-items: center; }
+.task-filters .field { flex: 1 1 180px; margin-bottom: 0; }
+.task-filters .validation { flex-basis: 100%; }
+.due-info { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 8px 0; }
+.badge.overdue { color: #a52a3e; background: #fff0f2; }
+.badge.upcoming { color: #805e10; background: #fff5d5; }
+.task-meta { flex-wrap: wrap; }
+.detail-card { padding: 28px; margin-bottom: 32px; }
+.detail-card h2 { font-size: 1.15rem; margin: 0 0 20px; }
+.detail-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin: 0; }
+.detail-grid dt { color: #707b90; font-size: .9rem; margin-bottom: 8px; }
+.detail-grid dd { margin: 0; overflow-wrap: anywhere; }
+.detail-description { border-top: 1px solid #e7eaf1; margin-top: 24px; padding-top: 24px; }
+.detail-description p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.task-title { overflow-wrap: anywhere; }
+.page-heading > div { min-width: 0; }
+.back-link { display: inline-block; color: #4f46e5; margin-bottom: 12px; }
+.pagination { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 24px; }
+.button.primary { background: #4f46e5; }
+.button.primary:hover { background: #4338ca; }
+.field small { color: #707b90; }
+.input-validation-error { border-color: #ba3e51; background: #fffbfc; }
+a:focus-visible, button:focus-visible { outline: 3px solid #8078ee; outline-offset: 3px; }
+@media (max-width: 1100px) { .task-row { flex-direction: column; gap: 20px; } .task-actions { flex-wrap: wrap; } }
+@media (max-width: 700px) { .detail-grid { grid-template-columns: 1fr; gap: 20px; } .form-card, .detail-card { padding: 20px; } .form-actions { flex-wrap: wrap; } .form-actions > * { flex: 1 1 auto; } .field input, .field select, .field textarea { min-width: 0; max-width: 100%; } }

@@ -1,0 +1,28 @@
+@model TaskDetailsViewModel
+@using WorkFlow.Mvc.Services
+@{ ViewData["Title"] = Model.Task.Code; var task = Model.Task; }
+<div class="page-heading">
+    <div>
+        <a class="back-link" asp-action="Index">← Görevlere dön</a>
+        <p class="eyebrow">@task.Code</p>
+        <h1 class="task-title">@task.Title</h1>
+    </div>
+    <a class="button primary" asp-action="Edit" asp-route-id="@task.Id">Görevi düzenle</a>
+</div>
+@if (TempData["Success"] is string success)
+{ <div class="message success" role="status">@success</div> }
+<article class="card detail-card">
+    <h2>Görev bilgileri</h2>
+    <dl class="detail-grid">
+        <div><dt>Görev kodu</dt><dd>@task.Code</dd></div>
+        <div><dt>Öncelik</dt><dd><span class="badge">@task.Priority</span></dd></div>
+        <div><dt>Durum</dt><dd>@(task.Status == Status.Todo ? "Yapılacak" : task.Status == Status.InProgress ? "Devam ediyor" : "Tamamlandı")</dd></div>
+        <div><dt>Oluşturulma (Türkiye saati)</dt><dd>@TimeZoneInfo.ConvertTimeFromUtc(task.CreatedDate, TaskDates.Istanbul).ToString("dd.MM.yyyy HH:mm")</dd></div>
+        <div><dt>Son teslim tarihi</dt><dd>@(task.DueDate.HasValue ? TaskDates.LocalDate(task.DueDate.Value).ToString("dd.MM.yyyy") : "Belirlenmedi")</dd></div>
+    </dl>
+    @if (TaskDates.IsOverdue(task.DueDate, task.Status, Model.Today))
+    { <p class="badge overdue">Gecikmiş</p> }
+    else if (TaskDates.IsUpcoming(task.DueDate, task.Status, Model.Today))
+    { <p class="badge upcoming">@(TaskDates.LocalDate(task.DueDate!.Value) == Model.Today ? "Son tarih bugün" : "Son tarih yaklaşıyor")</p> }
+    <section class="detail-description"><h2>Açıklama</h2><p>@(string.IsNullOrWhiteSpace(task.Description) ? "Bu görev için açıklama eklenmemiş." : task.Description)</p></section>
+</article>

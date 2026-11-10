@@ -1,0 +1,19 @@
+@model TaskEditViewModel
+@{ ViewData["Title"] = "Görevi düzenle"; }
+<div class="page-heading">
+    <div>
+        <a class="back-link" asp-action="Details" asp-route-id="@Model.Id">← Görev detayına dön</a>
+        <p class="eyebrow">@Model.Code</p>
+        <h1>Görevi düzenle</h1>
+        <p class="muted">Görevin bilgilerini güncelle. Başlık zorunludur.</p>
+    </div>
+</div>
+<section class="card form-card">
+    <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+        <partial name="_TaskFields" model="Model" />
+        <div class="form-actions">
+            <a class="button subtle" asp-action="Details" asp-route-id="@Model.Id">Vazgeç</a>
+            <button class="button primary" type="submit">Değişiklikleri kaydet</button>
+        </div>
+    </form>
+</section>

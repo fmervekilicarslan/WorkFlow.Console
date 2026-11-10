@@ -1,6 +1,13 @@
 @model TaskListViewModel
+@using WorkFlow.Mvc.Services
 @{
     ViewData["Title"] = "Görevler";
+    string? PageUrl(int page) => Url.Action("Index", new Microsoft.AspNetCore.Routing.RouteValueDictionary
+    {
+        ["Filter.Search"] = Model.Filter.Search, ["Filter.Status"] = Model.Filter.Status,
+        ["Filter.Priority"] = Model.Filter.Priority, ["Filter.Sort"] = Model.Filter.Sort,
+        ["Filter.PageSize"] = Model.Filter.PageSize, ["Filter.Page"] = page
+    });
 }
 
 <div class="page-heading">
@@ -22,16 +29,32 @@
 }
 
 <section class="card">
+    <div class="task-summary" aria-label="Tüm görevlerin özeti">
+        <span>Toplam: <strong>@Model.Summary.Total</strong></span>
+        <span>Yapılacak: <strong>@Model.Summary.Todo</strong></span>
+        <span>Devam ediyor: <strong>@Model.Summary.InProgress</strong></span>
+        <span>Tamamlandı: <strong>@Model.Summary.Completed</strong></span>
+    </div>
+    <form method="get" asp-action="Index" class="task-filters">
+        <div asp-validation-summary="All" class="validation" role="alert"></div>
+        <div class="field"><label asp-for="Filter.Search">Başlık veya açıklamada ara</label><input asp-for="Filter.Search" type="search" maxlength="200" /></div>
+        <div class="field"><label asp-for="Filter.Status">Durum</label><select asp-for="Filter.Status" asp-items="Html.GetEnumSelectList<Status>()"><option value="">Tüm durumlar</option></select></div>
+        <div class="field"><label asp-for="Filter.Priority">Öncelik</label><select asp-for="Filter.Priority" asp-items="Html.GetEnumSelectList<Priority>()"><option value="">Tüm öncelikler</option></select></div>
+        <button class="button primary" type="submit">Uygula</button>
+        <div class="field"><label asp-for="Filter.Sort">Sıralama</label><select asp-for="Filter.Sort" asp-items="Html.GetEnumSelectList<TaskSort>()"></select></div>
+        <div class="field"><label asp-for="Filter.PageSize">Sayfa başına</label><select asp-for="Filter.PageSize"><option value="10">10 görev</option><option value="20">20 görev</option><option value="50">50 görev</option></select></div>
+        <a asp-action="Index" class="button subtle">Temizle</a>
+    </form>
     <div class="section-heading">
         <h2>Görevler</h2>
-        <span class="count">@Model.Tasks.Count görev</span>
+        <span class="count">@Model.Pagination.TotalCount sonuç · bu sayfada @Model.Tasks.Count görev</span>
     </div>
 
     @if (Model.Tasks.Count == 0)
     {
         <div class="empty-state">
-            <h3>Henüz görev yok</h3>
-            <p>İlk görevini ekleyerek projeni planlamaya başla.</p>
+            <h3>@(Model.Summary.Total == 0 ? "Henüz görev yok" : "Eşleşen görev bulunamadı")</h3>
+            <p>@(Model.Summary.Total == 0 ? "İlk görevini ekleyerek projeni planlamaya başla." : "Aramayı veya filtreleri değiştirerek tekrar dene.")</p>
             <a class="button primary" asp-action="Create">Görev ekle</a>
         </div>
     }
@@ -44,16 +67,29 @@
                     <div class="task-main">
                         <div class="task-meta">
                             <span class="badge">@task.Priority</span>
-                            <span class="muted">@task.CreatedDate.ToString("dd.MM.yyyy")</span>
+                            <span class="muted">@task.Code</span>
+                            <span class="muted">@TaskDates.LocalDate(task.CreatedDate).ToString("dd.MM.yyyy")</span>
                         </div>
-                        <h3>@task.Title</h3>
+                        <h3><a asp-action="Details" asp-route-id="@task.Id">@task.Title</a></h3>
+                        @if (task.DueDate.HasValue)
+                        {
+                            <div class="due-info">
+                                <span>Son tarih: @TaskDates.LocalDate(task.DueDate.Value).ToString("dd.MM.yyyy")</span>
+                                @if (TaskDates.IsOverdue(task.DueDate, task.Status, Model.Today))
+                                { <strong class="badge overdue">Gecikmiş</strong> }
+                                else if (TaskDates.IsUpcoming(task.DueDate, task.Status, Model.Today))
+                                { <strong class="badge upcoming">@(TaskDates.LocalDate(task.DueDate.Value) == Model.Today ? "Bugün" : "Yaklaşıyor")</strong> }
+                            </div>
+                        }
                         @if (!string.IsNullOrWhiteSpace(task.Description))
                         {
                             <p>@task.Description</p>
                         }
                     </div>
                     <div class="task-actions">
+                        <a class="button subtle" asp-action="Edit" asp-route-id="@task.Id">Düzenle</a>
                         <form asp-action="UpdateStatus" method="post" class="status-form">
+                            <partial name="_ListContext" model="Model.Filter" />
                             <input type="hidden" name="gorevId" value="@task.Id" />
                             <label for="status-@task.Id">Durum</label>
                             <select id="status-@task.Id" name="yeniDurum">
@@ -65,6 +101,7 @@
                             <button class="button subtle" type="submit">Kaydet</button>
                         </form>
                         <form asp-action="Delete" method="post">
+                            <partial name="_ListContext" model="Model.Filter" />
                             <input type="hidden" name="gorevId" value="@task.Id" />
                             <button class="button danger" type="submit">Sil</button>
                         </form>
@@ -72,5 +109,22 @@
                 </article>
             }
         </div>
+    }
+    @if (Model.Pagination.TotalPages > 1)
+    {
+        <nav class="pagination" aria-label="Görev sayfaları">
+            @if (Model.Pagination.Page > 1)
+            { <a class="button subtle" href="@PageUrl(Model.Pagination.Page - 1)" rel="prev">Önceki</a> }
+            @for (var page = Math.Max(1, Model.Pagination.Page - 2); page <= Math.Min(Model.Pagination.TotalPages, Model.Pagination.Page + 2); page++)
+            {
+                if (page == Model.Pagination.Page)
+                { <span class="button primary" aria-current="page">@(page)</span> }
+                else
+                { <a class="button subtle" href="@PageUrl(page)" aria-label="Sayfa @(page)">@(page)</a> }
+            }
+            @if (Model.Pagination.Page < Model.Pagination.TotalPages)
+            { <a class="button subtle" href="@PageUrl(Model.Pagination.Page + 1)" rel="next">Sonraki</a> }
+            <span class="muted">Sayfa @Model.Pagination.Page / @Model.Pagination.TotalPages</span>
+        </nav>
     }
 </section>

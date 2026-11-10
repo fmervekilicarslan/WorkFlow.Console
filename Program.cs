@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using WorkFlow.Mvc.Data;
 using WorkFlow.Mvc.Interfaces;
 using WorkFlow.Mvc.Models;
 using WorkFlow.Mvc.Services;
@@ -9,9 +11,14 @@ builder.Logging.AddConsole();
 
 builder.Services.AddControllersWithViews();
 
-// Bellekteki tek proje ve servis bütün HTTP isteklerinde paylaşılır.
+var connectionString = builder.Configuration.GetConnectionString("WorkFlowDb")
+    ?? throw new InvalidOperationException("ConnectionStrings:WorkFlowDb yapılandırılmalıdır.");
+
+builder.Services.AddDbContext<WorkFlowDbContext>(options => options.UseNpgsql(connectionString));
+
+// Proje adı yalnızca arayüzde gösterilir; görevler veritabanında saklanır.
 builder.Services.AddSingleton(new Project("Staj Görevlerim"));
-builder.Services.AddSingleton<ITaskService, TaskService>();
+builder.Services.AddScoped<ITaskService, TaskService>();
 
 var app = builder.Build();
 

@@ -6,3 +6,5 @@ obj/
 # Yerel proje yönergeleri ve hafıza dosyaları
 AGENTS.md
 PROJECT_MEMORY.md
+.local-checkpoints/
+.local-backups/
