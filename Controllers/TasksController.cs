@@ -102,10 +102,24 @@ public class TasksController : Controller
     [ValidateAntiForgeryToken]
     public IActionResult Create(TaskCreateViewModel model)
     {
-        if (string.IsNullOrWhiteSpace(model.Title))
+        foreach (var (field, message) in new[]
+                 {
+                     (nameof(model.Priority), "Geçerli bir öncelik seçin."),
+                     (nameof(model.Status), "Geçerli bir durum seçin.")
+                 })
+        {
+            if (ModelState[field] is { Errors.Count: > 0 } entry)
+            {
+                entry.Errors.Clear();
+                ModelState.AddModelError(field, message);
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(model.Title) &&
+            (ModelState[nameof(model.Title)]?.Errors.Count ?? 0) == 0)
         {
             //ModelState'e, adı Title olan alan için "Başlık boş olamaz." hatasını ekle.
-            ModelState.AddModelError(nameof(model.Title), "Başlık boş olamaz.");
+            ModelState.AddModelError(nameof(model.Title), "Görev başlığı boş bırakılamaz.");
         }
            //IsValid -> Geçerli mi?
         if (!ModelState.IsValid)//Burada ModelState nesnesinin doğrulama durumu kontrol edilir.

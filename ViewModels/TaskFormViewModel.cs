@@ -5,7 +5,7 @@ namespace WorkFlow.Mvc.ViewModels;
 
 public class TaskFormViewModel
 {
-    [Required(ErrorMessage = "Başlık zorunludur.")]
+    [Required(ErrorMessage = "Görev başlığı boş bırakılamaz.")]
     [StringLength(120, ErrorMessage = "Başlık en fazla 120 karakter olabilir.")]
     [Display(Name = "Başlık")]
     public string Title { get; set; } = string.Empty;

@@ -9,7 +9,7 @@
 <div class="pen-create-grid">
     <section class="pen-form-card" aria-labelledby="form-heading">
         <header><span class="pen-form-icon"><partial name="_PenIcon" model='"clipboard"' /></span><div><h2 id="form-heading">Görev bilgileri</h2><p>* işaretli alanların doldurulması zorunludur.</p></div></header>
-        <form asp-action="Create" method="post">
+        <form asp-action="Create" method="post" novalidate>
             <partial name="_PenCreateFields" model="Model" />
             <div class="pen-form-actions"><a class="pen-button pen-secondary" asp-action="Index">İptal</a><button class="pen-button pen-primary" type="submit"><partial name="_PenIcon" model='"check"' />Görevi Kaydet</button></div>
         </form>

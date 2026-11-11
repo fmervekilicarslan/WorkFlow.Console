@@ -23,7 +23,7 @@ Bağlantı parolası rastgele üretilir. Bağlantı yalnızca test alt süreçle
 
 Her yazma testi modu bağlantının açık host, port, veritabanı, kullanıcı ve parola içerdiğini; hedefin benzersiz yerel test adı olduğunu; bağlı veritabanı/kullanıcı kimliğini ve kısıtlı rol sahipliğini doğrular. `workflow_db`, eksik bağlantı ve belirsiz hedefler reddedilir. Testler User Secrets'a geri dönmez. Migration uygulaması yalnızca bu denetimden sonra yapılır.
 
-Betik sırasıyla `--prepare-test-database`, `--database` ve `--stage2` modlarını çalıştırır. Son iki grup 16 PostgreSQL ve 52 servis/HTTP kontrolü içerir. Bu kontroller yeni test kayıtlarını temizler; test veritabanını ve rolünü silmez. Herhangi bir kaynak silme işlemi için ayrıca kullanıcı onayı gerekir.
+Betik sırasıyla `--prepare-test-database`, `--database` ve `--stage2` modlarını çalıştırır. Son iki grup 16 PostgreSQL ve 72 servis/HTTP kontrolü içerir. HTTP kapsamı İngilizce dil isteğinde boş/boşluklu başlığın tam Türkçe alan ve özet mesajını, erişilebilirlik bağlantılarını, 120/121 karakter sınırını, geçersiz enumları, form değerlerinin ve mevcut kayıtların korunmasını da doğrular. Toplam 37 bağlantısız kontrolle birlikte 125 kontrol vardır. Bu kontroller yeni test kayıtlarını temizler; test veritabanını ve rolünü silmez. Herhangi bir kaynak silme işlemi için ayrıca kullanıcı onayı gerekir.
 
 Canlı `workflow_db` görevleri, migration geçmişi, sequence durumu ve public şema/nesne sahipliği/izinleri READ ONLY transaction içinde özetlenip önce/sonra karşılaştırılır. Eşzamanlı kullanıcı işlemi de fark yaratabilir; fark varsa incelemeden devam etmeyin. Bu karşılaştırma yedek veya tam sunucu denetimi değildir.
 

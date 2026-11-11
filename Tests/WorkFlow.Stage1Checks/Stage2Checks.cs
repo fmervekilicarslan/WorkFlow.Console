@@ -102,6 +102,7 @@ internal static class Stage2Checks
             server.BeginOutputReadLine(); server.BeginErrorReadLine();
             using var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, CookieContainer = new CookieContainer() })
             { BaseAddress = new Uri($"http://127.0.0.1:{port}"), Timeout = TimeSpan.FromSeconds(20) };
+            client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
             var ready = false;
             for (int i = 0; i < 40; i++)
             {
@@ -116,8 +117,11 @@ internal static class Stage2Checks
             var form = await Get("/Tasks/Create");
             var token = Token(form);
             Check(token.Length > 0 && form.Contains("name=\"DueDate\""), "Create form renders shared fields and antiforgery token");
+            Check(Regex.IsMatch(form, @"<form\b[^>]*\bnovalidate\b") && form.Contains("required")
+                && form.Contains("aria-describedby=\"title-help title-error\""), "Create delegates required validation to MVC while retaining accessible field semantics");
             var invalidCreates = new[]
             {
+                (Title: "", Description: "preserved description", Priority: "3", Status: "1"),
                 (Title: " ", Description: "preserved description", Priority: "1", Status: "0"),
                 (Title: new string('x', 121), Description: "", Priority: "1", Status: "0"),
                 (Title: "Valid title", Description: new string('x', 1001), Priority: "1", Status: "0"),
@@ -128,15 +132,50 @@ internal static class Stage2Checks
             {
                 using var invalidDb = Open();
                 var beforeCount = await invalidDb.Tasks.CountAsync();
+                var beforeInvalid = JsonSerializer.Serialize(await invalidDb.Tasks.AsNoTracking().OrderBy(t => t.Id).ToListAsync());
                 using var invalidCreate = await Post("/Tasks/Create", new()
                 {
                     ["Title"] = title, ["Description"] = description, ["Priority"] = priority,
-                    ["Status"] = status, ["__RequestVerificationToken"] = token
+                    ["Status"] = status, ["DueDate"] = "2026-12-20", ["__RequestVerificationToken"] = token
                 });
                 var html = await invalidCreate.Content.ReadAsStringAsync();
                 Check(invalidCreate.StatusCode == HttpStatusCode.OK && html.Contains("validation-summary-errors"), "Invalid create returns form errors");
                 Check(await invalidDb.Tasks.CountAsync() == beforeCount, "Invalid create does not insert a task");
+                Check(JsonSerializer.Serialize(await invalidDb.Tasks.AsNoTracking().OrderBy(t => t.Id).ToListAsync()) == beforeInvalid,
+                    "Invalid create preserves every existing task field");
+                var decoded = WebUtility.HtmlDecode(html);
+                var field = Regex.Match(decoded, @"<span\b[^>]*id=""title-error""[^>]*>(.*?)</span>", RegexOptions.Singleline).Groups[1].Value.Trim();
+                var summary = Regex.Match(decoded, @"<div\b[^>]*class=""validation-summary-errors""[^>]*>(.*?)</div>", RegexOptions.Singleline).Groups[1].Value;
+                if (string.IsNullOrWhiteSpace(title))
+                {
+                    const string required = "Görev başlığı boş bırakılamaz.";
+                    Check(field == required && Regex.Matches(summary, Regex.Escape(required)).Count == 1,
+                        "Blank/whitespace title has exact Turkish field error and one summary entry under English locale");
+                    Check(Regex.IsMatch(decoded, @"<input\b[^>]*aria-invalid=""true""[^>]*id=""Title""")
+                        && decoded.Contains("aria-describedby=\"title-help title-error\""), "Invalid title exposes field error to assistive technology");
+                    Check(Regex.Match(decoded, @"<textarea\b[^>]*id=""Description""[^>]*>(.*?)</textarea>", RegexOptions.Singleline).Groups[1].Value.Trim() == "preserved description" && decoded.Contains("value=\"2026-12-20\"")
+                        && Regex.IsMatch(decoded, $@"<option[^>]*(?:selected=""selected""[^>]*value=""{priority}""|value=""{priority}""[^>]*selected=""selected"")")
+                        && Regex.IsMatch(decoded, $@"<select[^>]*id=""Status""[^>]*>.*?<option[^>]*(?:selected=""selected""[^>]*value=""{status}""|value=""{status}""[^>]*selected=""selected"")", RegexOptions.Singleline),
+                        "Invalid title preserves description, priority, status and due date");
+                }
+                if (title.Length == 121)
+                    Check(field == "Başlık en fazla 120 karakter olabilir." && summary.Contains(field), "121-character title has Turkish field and summary length errors");
+                if (priority == "999")
+                    Check(decoded.Contains("Geçerli bir öncelik seçin."), "Invalid priority retains Turkish validation");
+                if (status == "999")
+                    Check(decoded.Contains("Geçerli bir durum seçin."), "Invalid status retains Turkish validation");
             }
+            var maximumTitle = marker + new string('x', 120 - marker.Length);
+            using var maximumResponse = await Post("/Tasks/Create", new()
+            {
+                ["Title"] = maximumTitle, ["Description"] = "", ["Priority"] = "1", ["Status"] = "0", ["__RequestVerificationToken"] = token
+            });
+            using (var maximumDb = Open())
+                Check(maximumResponse.StatusCode == HttpStatusCode.Redirect && await maximumDb.Tasks.AnyAsync(t => t.Title == maximumTitle),
+                    "120-character valid title is accepted and persisted after invalid submissions");
+            var cleanForm = await Get("/Tasks/Create");
+            Check(!cleanForm.Contains("validation-summary-errors") && !cleanForm.Contains("field-validation-error")
+                && cleanForm.Contains("aria-invalid=\"false\""), "Fresh create form clears previous title errors after successful submission");
             var fields = new Dictionary<string, string> { ["Title"] = marker + " HTTP <script>alert(1)</script>", ["Description"] = "", ["Priority"] = "3", ["Status"] = "0", ["DueDate"] = "", ["__RequestVerificationToken"] = token };
             using var createResponse = await Post("/Tasks/Create", fields);
             Check(createResponse.StatusCode == HttpStatusCode.Redirect, "HTTP create accepts empty description and deadline");
