@@ -8,14 +8,25 @@ using WorkFlow.Mvc.Models;
 using WorkFlow.Mvc.Services;
 using WorkFlow.Mvc.ViewModels;
 
-if (args.Contains("--stage2"))
+if (args.Length > 0)
 {
-    await Stage2Checks.Run();
-    return;
-}
-if (args.Contains("--database"))
-{
-    await DatabaseChecks.Run();
+    try
+    {
+        if (args.Length != 1) throw new InvalidOperationException("Exactly one test mode is required.");
+        switch (args[0])
+        {
+            case "--stage2": await Stage2Checks.Run(); break;
+            case "--database": await DatabaseChecks.Run(); break;
+            case "--prepare-test-database": await TestDatabase.Prepare(); break;
+            default: throw new InvalidOperationException("Unknown test mode; refusing to run.");
+        }
+    }
+    catch (Exception ex)
+    {
+        // Do not expose connection details from provider exceptions.
+        Console.Error.WriteLine(ex is InvalidOperationException ? ex.Message : $"Test run failed ({ex.GetType().Name}); connection details suppressed.");
+        Environment.ExitCode = 1;
+    }
     return;
 }
 
@@ -61,3 +72,4 @@ var task = new TaskItem("Title", "Description", Priority.Normal, Status.Todo);
 entity.FindProperty("CodeNumber")!.PropertyInfo!.SetValue(task, 1001L);
 Check(task.Code == "WF-1001" && task.Id != Guid.Empty, "Code grows beyond three digits while retaining Guid identity");
 Console.WriteLine($"{checks} checks passed. Database was not contacted.");
+IsolationChecks.Run();

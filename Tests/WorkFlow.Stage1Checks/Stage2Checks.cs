@@ -4,7 +4,6 @@ using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Npgsql;
 using WorkFlow.Mvc.Data;
 using WorkFlow.Mvc.Enums;
@@ -16,11 +15,7 @@ internal static class Stage2Checks
 {
     public static async Task Run()
     {
-        var config = new ConfigurationBuilder().AddUserSecrets(typeof(WorkFlowDbContext).Assembly, false).Build();
-        var connection = new NpgsqlConnectionStringBuilder(config.GetConnectionString("WorkFlowDb"));
-        if (connection.Database != "workflow_db" || connection.Host is not ("localhost" or "127.0.0.1"))
-            throw new InvalidOperationException("Only local workflow_db is allowed");
-        connection.IncludeErrorDetail = false;
+        var connection = await TestDatabase.VerifiedConnection();
         WorkFlowDbContext Open() => new(new DbContextOptionsBuilder<WorkFlowDbContext>().UseNpgsql(connection.ConnectionString).Options);
         int count = 0;
         void Check(bool ok, string message)
@@ -48,6 +43,8 @@ internal static class Stage2Checks
                 created.Add(task);
             }
             var first = service.SayfaliGorevleriGetir(marker, pageSize: 5);
+            Check(service.TumGorevleriGetir(marker + " 11").Single().Id == created[11].Id, "Title search finds the expected task");
+            Check(service.TumGorevleriGetir(marker + " description").Count == 12, "Description search finds all test tasks");
             var second = service.SayfaliGorevleriGetir(marker, page: 2, pageSize: 5);
             var last = service.SayfaliGorevleriGetir(marker, page: int.MaxValue, pageSize: 5);
             Check(first.TotalCount == 12 && first.TotalPages == 3 && first.Items.Count == 5 && last.Page == 3 && last.Items.Count == 2, "Pagination counts and oversized page clamp");
@@ -67,7 +64,9 @@ internal static class Stage2Checks
             var empty = service.SayfaliGorevleriGetir(marker, Status.Completed);
             Check(empty.TotalCount == 0 && empty.Items.Count == 0 && empty.Page == 1, "Empty filtered page");
             var target = created[0];
-            var identity = (target.Id, target.CodeNumber, target.CreatedDate);
+            // Compare persisted timestamps on both sides: PostgreSQL stores microseconds, .NET ticks are finer.
+            var persisted = service.GorevGetir(target.Id)!;
+            var identity = (persisted.Id, persisted.CodeNumber, persisted.CreatedDate);
             Check(service.GorevGuncelle(target.Id, target.Title, null, Priority.Critical, Status.Completed, null), "Edit accepts empty optional fields");
             var edited = service.GorevGetir(target.Id)!;
             Check((edited.Id, edited.CodeNumber, edited.CreatedDate) == identity && edited.Description == "" && edited.DueDate == null && edited.Status == Status.Completed, "Edit preserves Guid/code/created date and updates fields");
@@ -75,6 +74,17 @@ internal static class Stage2Checks
             try { service.GorevGuncelle(target.Id, " ", "bad", (Priority)99, Status.Todo, null); }
             catch (GecersizGorevException) { invalidRejected = true; }
             Check(invalidRejected && service.GorevGetir(target.Id)!.Title == edited.Title, "Invalid edit leaves record unchanged");
+            foreach (var status in new[] { Status.Todo, Status.InProgress, Status.Completed })
+            {
+                service.GorevDurumunuGuncelle(target.Id, status);
+                using var read = Open();
+                var savedStatus = await read.Tasks.AsNoTracking().SingleAsync(t => t.Id == target.Id);
+                var summary = new TaskService(read).OzetGetir();
+                Check(savedStatus.Status == status && savedStatus.CodeNumber == persisted.CodeNumber, "Persisted status transition preserves code: " + status);
+                Check(summary.Total == 12 && summary.Todo == (status == Status.Todo ? 12 : 11)
+                    && summary.InProgress == (status == Status.InProgress ? 1 : 0)
+                    && summary.Completed == (status == Status.Completed ? 1 : 0), "Summary reflects status transition: " + status);
+            }
             Check(service.GorevGetir(Guid.NewGuid()) is null && !service.GorevGuncelle(Guid.NewGuid(), "Missing", null, Priority.Low, Status.Todo, null), "Missing task read and update are handled");
 
             var portProbe = new TcpListener(IPAddress.Loopback, 0); portProbe.Start();
@@ -106,6 +116,27 @@ internal static class Stage2Checks
             var form = await Get("/Tasks/Create");
             var token = Token(form);
             Check(token.Length > 0 && form.Contains("name=\"DueDate\""), "Create form renders shared fields and antiforgery token");
+            var invalidCreates = new[]
+            {
+                (Title: " ", Description: "preserved description", Priority: "1", Status: "0"),
+                (Title: new string('x', 121), Description: "", Priority: "1", Status: "0"),
+                (Title: "Valid title", Description: new string('x', 1001), Priority: "1", Status: "0"),
+                (Title: "Valid title", Description: "", Priority: "999", Status: "0"),
+                (Title: "Valid title", Description: "", Priority: "1", Status: "999")
+            };
+            foreach (var (title, description, priority, status) in invalidCreates)
+            {
+                using var invalidDb = Open();
+                var beforeCount = await invalidDb.Tasks.CountAsync();
+                using var invalidCreate = await Post("/Tasks/Create", new()
+                {
+                    ["Title"] = title, ["Description"] = description, ["Priority"] = priority,
+                    ["Status"] = status, ["__RequestVerificationToken"] = token
+                });
+                var html = await invalidCreate.Content.ReadAsStringAsync();
+                Check(invalidCreate.StatusCode == HttpStatusCode.OK && html.Contains("validation-summary-errors"), "Invalid create returns form errors");
+                Check(await invalidDb.Tasks.CountAsync() == beforeCount, "Invalid create does not insert a task");
+            }
             var fields = new Dictionary<string, string> { ["Title"] = marker + " HTTP <script>alert(1)</script>", ["Description"] = "", ["Priority"] = "3", ["Status"] = "0", ["DueDate"] = "", ["__RequestVerificationToken"] = token };
             using var createResponse = await Post("/Tasks/Create", fields);
             Check(createResponse.StatusCode == HttpStatusCode.Redirect, "HTTP create accepts empty description and deadline");

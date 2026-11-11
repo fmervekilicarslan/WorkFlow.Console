@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Npgsql;
 using WorkFlow.Mvc.Data;
 using WorkFlow.Mvc.Enums;
@@ -12,13 +11,7 @@ internal static class DatabaseChecks
 {
     public static async Task Run()
     {
-        // Credentials remain in memory and are never written to logs or artifacts.
-        var config = new ConfigurationBuilder().AddUserSecrets(typeof(WorkFlowDbContext).Assembly, optional: false).Build();
-        var connectionString = config.GetConnectionString("WorkFlowDb") ?? throw new InvalidOperationException("Connection missing");
-        var connection = new NpgsqlConnectionStringBuilder(connectionString);
-        if (connection.Database != "workflow_db" || connection.Host is not ("localhost" or "127.0.0.1"))
-            throw new InvalidOperationException("Test target must be local workflow_db");
-        connection.IncludeErrorDetail = false;
+        var connection = await TestDatabase.VerifiedConnection();
         WorkFlowDbContext Open() => new(new DbContextOptionsBuilder<WorkFlowDbContext>().UseNpgsql(connection.ConnectionString).Options);
         var checkedCount = 0;
         void Check(bool condition, string message)
