@@ -1,0 +1,26 @@
+@model TaskFormViewModel
+@{
+    bool HasError(string field) => ViewData.ModelState[field]?.Errors.Count > 0;
+}
+<div class="pen-form-fields">
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="pen-notice pen-notice-error" role="alert" tabindex="-1" data-validation-alert><partial name="_PenIcon" model='"alert"' /><div><strong>Görev kaydedilemedi.</strong><p>İşaretli alanları kontrol et.</p><div asp-validation-summary="All"></div></div></div>
+    }
+    <div class="pen-field">
+        <label asp-for="Title">Başlık <span aria-hidden="true">*</span></label>
+        <input asp-for="Title" maxlength="120" required placeholder="Örn. Görev listesinin mobil görünümünü düzenle" aria-describedby="title-help title-error" aria-invalid="@(HasError("Title") ? "true" : "false")" />
+        <small id="title-help">Kısa ve açıklayıcı bir görev başlığı yaz.</small>
+        <span id="title-error" asp-validation-for="Title" class="pen-field-error"></span>
+    </div>
+    <div class="pen-field">
+        <div class="pen-label-row"><label asp-for="Description">Açıklama</label><span>İsteğe bağlı</span></div>
+        <textarea asp-for="Description" rows="6" maxlength="1000" placeholder="Görevin kapsamını ve yapılması gerekenleri açıkla..." aria-describedby="description-error" aria-invalid="@(HasError("Description") ? "true" : "false")"></textarea>
+        <span id="description-error" asp-validation-for="Description" class="pen-field-error"></span>
+    </div>
+    <div class="pen-field-grid">
+        <div class="pen-field"><label asp-for="Priority">Öncelik <span aria-hidden="true">*</span></label><div class="pen-select-wrap"><partial name="_PenIcon" model='"flag"' /><select asp-for="Priority" required aria-describedby="priority-help priority-error" aria-invalid="@(HasError("Priority") ? "true" : "false")"><option value="2">Low</option><option value="1">Medium</option><option value="0">High</option><option value="3">Critical</option></select></div><small id="priority-help">Görevin önem seviyesini belirle.</small><span id="priority-error" asp-validation-for="Priority" class="pen-field-error"></span></div>
+        <div class="pen-field"><label asp-for="Status">Durum <span aria-hidden="true">*</span></label><div class="pen-select-wrap"><partial name="_PenIcon" model='"circle"' /><select asp-for="Status" required aria-describedby="status-help status-error" aria-invalid="@(HasError("Status") ? "true" : "false")"><option value="0">Yapılacak</option><option value="1">Devam ediyor</option><option value="2">Tamamlandı</option></select></div><small id="status-help">Görevin mevcut aşamasını seç.</small><span id="status-error" asp-validation-for="Status" class="pen-field-error"></span></div>
+    </div>
+    <div class="pen-field"><div class="pen-label-row"><label asp-for="DueDate">Son teslim tarihi</label><span>İsteğe bağlı</span></div><input asp-for="DueDate" type="date" min="1900-01-01" max="9998-12-31" aria-describedby="due-help due-error" aria-invalid="@(HasError("DueDate") ? "true" : "false")" /><small id="due-help">Türkiye saatiyle seçilen günün sonuna kadar.</small><span id="due-error" asp-validation-for="DueDate" class="pen-field-error"></span></div>
+</div>

@@ -1,22 +1,23 @@
 @model TaskCreateViewModel
 @{
     ViewData["Title"] = "Yeni görev";
+    ViewData["PenPage"] = "create";
 }
-
-<div class="page-heading">
-    <div>
-        <p class="eyebrow">YENİ GÖREV</p>
-        <h1>Görev ekle</h1>
-        <p class="muted">Başlık zorunludur. Diğer alanları ihtiyacına göre doldur.</p>
-    </div>
+<a class="pen-back" asp-action="Index"><partial name="_PenIcon" model='"back"' />Görevlere dön</a>
+<div class="pen-heading pen-create-heading"><div><h1>Yeni bir görev oluştur.</h1><p>Yapılacakları netleştir. Detayları ekle ve ilk adımı at.</p></div></div>
+<partial name="_PenFeedback" />
+<div class="pen-create-grid">
+    <section class="pen-form-card" aria-labelledby="form-heading">
+        <header><span class="pen-form-icon"><partial name="_PenIcon" model='"clipboard"' /></span><div><h2 id="form-heading">Görev bilgileri</h2><p>* işaretli alanların doldurulması zorunludur.</p></div></header>
+        <form asp-action="Create" method="post">
+            <partial name="_PenCreateFields" model="Model" />
+            <div class="pen-form-actions"><a class="pen-button pen-secondary" asp-action="Index">İptal</a><button class="pen-button pen-primary" type="submit"><partial name="_PenIcon" model='"check"' />Görevi Kaydet</button></div>
+        </form>
+    </section>
+    <aside class="pen-form-guide" aria-label="Görev oluşturma rehberi">
+        <partial name="_PenIcon" model='"bulb"' />
+        <h2>İyi bir görev,<br />net bir başlangıç.</h2>
+        <p>Ne yapılacağını açıkça tanımla. Gerekli detayları açıklamaya ekle ve uygun önceliği seç.</p>
+        <div class="pen-priority-guide"><h3>ÖNCELİK SEVİYELERİ</h3><p><span class="priority-low">Low</span> · Düşük öncelik</p><p><span class="priority-normal">Medium</span> · Normal öncelik</p><p><span class="priority-high">High</span> · Yüksek öncelik</p><p><span class="priority-critical">Critical</span> · Acil müdahale</p></div>
+    </aside>
 </div>
-
-<section class="card form-card">
-    <form asp-action="Create" method="post">
-        <partial name="_TaskFields" model="Model" />
-        <div class="form-actions">
-            <a class="button subtle" asp-action="Index">Vazgeç</a>
-            <button class="button primary" type="submit">Görev ekle</button>
-        </div>
-    </form>
-</section>

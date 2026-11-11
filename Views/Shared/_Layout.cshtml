@@ -1,3 +1,7 @@
+@{
+    var penPage = ViewData["PenPage"] as string;
+    var isCreate = penPage == "create";
+}
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -5,16 +9,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>@ViewData["Title"] - WorkFlow</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pen.css" asp-append-version="true" />
 </head>
-<body>
-    <header class="site-header">
-        <div class="shell header-inner">
-            <a class="brand" asp-controller="Tasks" asp-action="Index">WorkFlow</a>
-            <span class="header-caption">Staj görev yönetimi</span>
+<body class="@(penPage is not null ? "pen-app" : "")">
+<partial name="_PenIcons" />
+@if (penPage is not null)
+{
+    <a class="pen-skip" href="#main-content">İçeriğe geç</a>
+    <div class="pen-shell">
+        <aside class="pen-sidebar">
+            <a class="pen-brand" asp-controller="Tasks" asp-action="Index"><span><partial name="_PenIcon" model='"workflow"' /></span>WorkFlow</a>
+            <p class="pen-menu-label">ÇALIŞMA ALANI</p>
+            <nav aria-label="Çalışma alanı">
+                <a class="@(!isCreate ? "active" : "")" asp-controller="Tasks" asp-action="Index" aria-current="@(!isCreate ? "page" : null)"><partial name="_PenIcon" model='"list"' />Görevler
+                    @if (ViewData["TaskCount"] is int taskCount) { <span class="pen-nav-count">@taskCount</span> }
+                </a>
+                <a class="@(isCreate ? "active" : "")" asp-controller="Tasks" asp-action="Create" aria-current="@(isCreate ? "page" : null)"><partial name="_PenIcon" model='"circle-plus"' />Yeni görev</a>
+            </nav>
+            <div class="pen-sidebar-note"><partial name="_PenIcon" model='"layers"' /><strong>Daha az karmaşa.</strong><p>Görevlerini düzenle,<br />önemli olana odaklan.</p></div>
+            <small>WorkFlow / v1.0</small>
+        </aside>
+        <div class="pen-content">
+            <header class="pen-mobile-header">
+                <a class="pen-brand" asp-controller="Tasks" asp-action="Index"><span><partial name="_PenIcon" model='"workflow"' /></span>WorkFlow</a>
+                <button class="pen-icon-button" type="button" data-mobile-menu aria-controls="mobile-navigation" aria-expanded="false" aria-label="Gezinme menüsünü aç"><partial name="_PenIcon" model='"menu"' /></button>
+                <nav id="mobile-navigation" aria-label="Mobil gezinme" hidden><a asp-controller="Tasks" asp-action="Index">Görevler</a><a asp-controller="Tasks" asp-action="Create">Yeni görev</a></nav>
+            </header>
+            <header class="pen-topbar"><div><partial name="_PenIcon" model='"house"' /><span>/</span><a asp-controller="Tasks" asp-action="Index">Görevler</a>@if (isCreate) { <span>/</span><span>Yeni görev</span> }</div><small>GÖREV YÖNETİMİ</small></header>
+            <main id="main-content" class="pen-main">@RenderBody()</main>
         </div>
-    </header>
-    <main class="shell">
-        @RenderBody()
-    </main>
+    </div>
+}
+else
+{
+    <header class="site-header"><div class="shell header-inner"><a class="brand" asp-controller="Tasks" asp-action="Index">WorkFlow</a><span class="header-caption">Staj görev yönetimi</span></div></header>
+    <main class="shell">@RenderBody()</main>
+}
+<script src="~/js/pen-ui.js" asp-append-version="true" defer></script>
 </body>
 </html>

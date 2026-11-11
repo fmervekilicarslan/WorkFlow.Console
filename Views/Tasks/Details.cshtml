@@ -9,8 +9,7 @@
     </div>
     <a class="button primary" asp-action="Edit" asp-route-id="@task.Id">Görevi düzenle</a>
 </div>
-@if (TempData["Success"] is string success)
-{ <div class="message success" role="status">@success</div> }
+<partial name="_PenFeedback" />
 <article class="card detail-card">
     <h2>Görev bilgileri</h2>
     <dl class="detail-grid">

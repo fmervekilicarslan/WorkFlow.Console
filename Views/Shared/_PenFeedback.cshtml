@@ -1,0 +1,13 @@
+@if (TempData["Success"] is string success)
+{
+    <div class="pen-notice pen-notice-success" role="status">
+        <partial name="_PenIcon" model='"check-circle"' />
+        <div><strong>@(success == "Görev eklendi." ? "Görev başarıyla oluşturuldu." : success)</strong>
+        @if (success == "Görev eklendi.") { <p>Yeni görevin listene eklendi.</p> }</div>
+        <button type="button" class="pen-icon-button" data-dismiss-notice aria-label="Bildirimi kapat"><partial name="_PenIcon" model='"x"' /></button>
+    </div>
+}
+@if (TempData["Error"] is string error)
+{
+    <div class="pen-notice pen-notice-error" role="alert"><partial name="_PenIcon" model='"alert"' /><div>@error</div></div>
+}
