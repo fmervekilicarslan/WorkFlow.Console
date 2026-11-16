@@ -1,6 +1,7 @@
 (() => {
     'use strict';
-    const themeButtons = document.querySelectorAll('[data-theme-toggle]');
+    const themeButtons = document.querySelectorAll('[data-theme-choice]');
+    const themeSelectors = document.querySelectorAll('[data-theme-selector]');
     const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
     let themePreference = null;
     try { themePreference = localStorage.getItem('workflow-theme'); } catch { /* Depolama erişimi isteğe bağlıdır. */ }
@@ -8,16 +9,14 @@
     const applyTheme = theme => {
         document.documentElement.dataset.theme = theme;
         themeButtons.forEach(button => {
-            const label = theme === 'dark' ? 'Açık temaya geç' : 'Koyu temaya geç';
-            button.textContent = button.classList.contains('pen-mobile-theme') ? (theme === 'dark' ? 'Açık' : 'Koyu') : label;
-            button.setAttribute('aria-label', label);
+            button.setAttribute('aria-pressed', String(button.dataset.themeChoice === theme));
         });
     };
     applyTheme(themePreference || (themeMedia.matches ? 'dark' : 'light'));
+    themeSelectors.forEach(selector => { selector.hidden = false; });
     themeButtons.forEach(button => {
-        button.hidden = false;
         button.addEventListener('click', () => {
-            themePreference = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+            themePreference = button.dataset.themeChoice;
             applyTheme(themePreference);
             try { localStorage.setItem('workflow-theme', themePreference); } catch { /* Oturum boyunca seçim korunur. */ }
         });

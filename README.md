@@ -29,7 +29,7 @@ Bu proje, nesne yönelimli programlama prensiplerini ve ASP.NET Core MVC mimaris
 - Liste, oluşturma, düzenleme, detay ve hata ekranlarında ortak responsive görünüm
 - Sistem tercihinden başlayan, kullanıcı seçimini saklayan açık/koyu tema
 
-Tema düğmesi masaüstünde yan menüde, mobilde üst çubuktadır. Tarayıcı depolamasına erişilemiyorsa tema seçimi yalnızca açık sayfada geçerlidir. JavaScript kapalıyken mobil gezinme bağlantıları görünür kalır; form doğrulaması sunucuda çalışır.
+Güneş/ay tema seçicisi masaüstünde üst çubuğun sağında, mobilde hamburger menüsünün yanındadır. Seçili tema mor vurguyla belirtilir; seçenekler klavyeyle kullanılabilir. Tarayıcı depolamasına erişilemiyorsa tema seçimi yalnızca açık sayfada geçerlidir. JavaScript kapalıyken mobil gezinme bağlantıları görünür kalır; form doğrulaması sunucuda çalışır.
 
 ## Proje Mimarisi
 
