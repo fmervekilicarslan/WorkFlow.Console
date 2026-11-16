@@ -1,6 +1,7 @@
 @{
     var penPage = ViewData["PenPage"] as string;
     var isCreate = penPage == "create";
+    var pageTitle = ViewData["Title"] as string;
 }
 <!DOCTYPE html>
 <html lang="tr">
@@ -8,8 +9,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>@ViewData["Title"] - WorkFlow</title>
+    <script>try { const saved = localStorage.getItem('workflow-theme'); document.documentElement.dataset.theme = saved === 'light' || saved === 'dark' ? saved : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); } catch { /* Tema tercihi kullanılamıyorsa varsayılan görünüm kullanılır. */ }</script>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/pen.css" asp-append-version="true" />
+    <noscript><style>[data-mobile-menu] { display: none !important; }</style></noscript>
 </head>
 <body class="@(penPage is not null ? "pen-app" : "")">
 <partial name="_PenIcons" />
@@ -21,12 +24,13 @@
             <a class="pen-brand" asp-controller="Tasks" asp-action="Index"><span><partial name="_PenIcon" model='"workflow"' /></span>WorkFlow</a>
             <p class="pen-menu-label">ÇALIŞMA ALANI</p>
             <nav aria-label="Çalışma alanı">
-                <a class="@(!isCreate ? "active" : "")" asp-controller="Tasks" asp-action="Index" aria-current="@(!isCreate ? "page" : null)"><partial name="_PenIcon" model='"list"' />Görevler
+                <a class="@(!isCreate ? "active" : "")" asp-controller="Tasks" asp-action="Index" aria-current="@(penPage == "index" ? "page" : null)"><partial name="_PenIcon" model='"list"' />Görevler
                     @if (ViewData["TaskCount"] is int taskCount) { <span class="pen-nav-count">@taskCount</span> }
                 </a>
                 <a class="@(isCreate ? "active" : "")" asp-controller="Tasks" asp-action="Create" aria-current="@(isCreate ? "page" : null)"><partial name="_PenIcon" model='"circle-plus"' />Yeni görev</a>
             </nav>
             <div class="pen-sidebar-note"><partial name="_PenIcon" model='"layers"' /><strong>Daha az karmaşa.</strong><p>Görevlerini düzenle,<br />önemli olana odaklan.</p></div>
+            <button class="pen-theme-toggle" type="button" data-theme-toggle hidden></button>
             <small>WorkFlow / v1.0</small>
         </aside>
         <div class="pen-content">
@@ -34,8 +38,10 @@
                 <a class="pen-brand" asp-controller="Tasks" asp-action="Index"><span><partial name="_PenIcon" model='"workflow"' /></span>WorkFlow</a>
                 <button class="pen-icon-button" type="button" data-mobile-menu aria-controls="mobile-navigation" aria-expanded="false" aria-label="Gezinme menüsünü aç"><partial name="_PenIcon" model='"menu"' /></button>
                 <nav id="mobile-navigation" aria-label="Mobil gezinme" hidden><a asp-controller="Tasks" asp-action="Index">Görevler</a><a asp-controller="Tasks" asp-action="Create">Yeni görev</a></nav>
+                <noscript><nav class="pen-noscript-nav" aria-label="Mobil gezinme"><a asp-controller="Tasks" asp-action="Index">Görevler</a><a asp-controller="Tasks" asp-action="Create">Yeni görev</a></nav></noscript>
+                <button class="pen-theme-toggle pen-mobile-theme" type="button" data-theme-toggle hidden></button>
             </header>
-            <header class="pen-topbar"><div><partial name="_PenIcon" model='"house"' /><span>/</span><a asp-controller="Tasks" asp-action="Index">Görevler</a>@if (isCreate) { <span>/</span><span>Yeni görev</span> }</div><small>GÖREV YÖNETİMİ</small></header>
+            <header class="pen-topbar"><div><partial name="_PenIcon" model='"house"' /><span>/</span>@if (penPage == "index") { <span aria-current="page">Görevler</span> } else { <a asp-controller="Tasks" asp-action="Index">Görevler</a><span>/</span><span aria-current="page">@pageTitle</span> }</div><small>GÖREV YÖNETİMİ</small></header>
             <main id="main-content" class="pen-main">@RenderBody()</main>
         </div>
     </div>

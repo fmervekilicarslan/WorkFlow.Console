@@ -69,6 +69,7 @@ public class TasksController : Controller
         if (existing is null) return MissingTask();
         model.Id = existing.Id;
         model.Code = existing.Code;
+        NormalizeFormErrors(model);
         if (!ModelState.IsValid) return View(model);
         try
         {
@@ -102,18 +103,7 @@ public class TasksController : Controller
     [ValidateAntiForgeryToken]
     public IActionResult Create(TaskCreateViewModel model)
     {
-        foreach (var (field, message) in new[]
-                 {
-                     (nameof(model.Priority), "Geçerli bir öncelik seçin."),
-                     (nameof(model.Status), "Geçerli bir durum seçin.")
-                 })
-        {
-            if (ModelState[field] is { Errors.Count: > 0 } entry)
-            {
-                entry.Errors.Clear();
-                ModelState.AddModelError(field, message);
-            }
-        }
+        NormalizeFormErrors(model);
 
         if (string.IsNullOrWhiteSpace(model.Title) &&
             (ModelState[nameof(model.Title)]?.Errors.Count ?? 0) == 0)
@@ -162,6 +152,28 @@ public class TasksController : Controller
         {
             ModelState.AddModelError(string.Empty, "Görev kaydedilemedi. Bilgileriniz korundu; tekrar deneyin.");
             return View(model);
+        }
+    }
+
+    private void NormalizeFormErrors(TaskFormViewModel model)
+    {
+        foreach (var (field, message) in new[]
+                 {
+                     (nameof(model.Priority), "Geçerli bir öncelik seçin."),
+                     (nameof(model.Status), "Geçerli bir durum seçin.")
+                 })
+        {
+            if (ModelState[field] is { Errors.Count: > 0 } entry)
+            {
+                entry.Errors.Clear();
+                ModelState.AddModelError(field, message);
+            }
+        }
+
+        if (!model.DueDate.HasValue && ModelState[nameof(model.DueDate)] is { Errors.Count: > 0 } dateEntry)
+        {
+            dateEntry.Errors.Clear();
+            ModelState.AddModelError(nameof(model.DueDate), "Geçerli bir son teslim tarihi girin.");
         }
     }
 

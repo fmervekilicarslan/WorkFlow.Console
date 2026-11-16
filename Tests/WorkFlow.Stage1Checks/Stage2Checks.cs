@@ -165,6 +165,52 @@ internal static class Stage2Checks
                 if (status == "999")
                     Check(decoded.Contains("Geçerli bir durum seçin."), "Invalid status retains Turkish validation");
             }
+            var formErrorCases = new[]
+            {
+                (Field: "Title", Value: "", Error: "Görev başlığı boş bırakılamaz."),
+                (Field: "Title", Value: " ", Error: "Görev başlığı boş bırakılamaz."),
+                (Field: "Priority", Value: "999", Error: "Geçerli bir öncelik seçin."),
+                (Field: "Priority", Value: "abc", Error: "Geçerli bir öncelik seçin."),
+                (Field: "Status", Value: "999", Error: "Geçerli bir durum seçin."),
+                (Field: "Status", Value: "abc", Error: "Geçerli bir durum seçin."),
+                (Field: "DueDate", Value: "abc", Error: "Geçerli bir son teslim tarihi girin."),
+                (Field: "DueDate", Value: "2026-02-30", Error: "Geçerli bir son teslim tarihi girin."),
+                (Field: "DueDate", Value: "1899-12-31", Error: "1900 ile 9998 yılları arasında bir tarih seçin."),
+                (Field: "DueDate", Value: "9999-01-01", Error: "1900 ile 9998 yılları arasında bir tarih seçin.")
+            };
+            foreach (var path in new[] { "/Tasks/Create", $"/Tasks/Edit/{target.Id}" })
+            {
+                var errorToken = Token(await Get(path));
+                foreach (var errorCase in formErrorCases)
+                {
+                    using var checkDb = Open();
+                    var beforeError = JsonSerializer.Serialize(await checkDb.Tasks.AsNoTracking().OrderBy(t => t.Id).ToListAsync());
+                    var attempted = new Dictionary<string, string>
+                    {
+                        ["Title"] = marker + " retained form title", ["Description"] = "Retained description <safe>",
+                        ["Priority"] = "3", ["Status"] = "1", ["DueDate"] = "2026-12-20",
+                        ["__RequestVerificationToken"] = errorToken
+                    };
+                    attempted[errorCase.Field] = errorCase.Value;
+                    using var errorResponse = await Post(path, attempted);
+                    var errorHtml = WebUtility.HtmlDecode(await errorResponse.Content.ReadAsStringAsync());
+                    var label = $"{path.Split('/')[2]} {errorCase.Field} '{errorCase.Value}'";
+                    Check(errorResponse.StatusCode == HttpStatusCode.OK, label + " returns the editable form");
+                    var summaryHtml = Regex.Match(errorHtml, @"<div\b[^>]*class=""validation-summary-errors""[^>]*>(.*?)</div>", RegexOptions.Singleline).Groups[1].Value;
+                    var fieldHtml = Regex.Match(errorHtml, $@"<span\b[^>]*data-valmsg-for=""{errorCase.Field}""[^>]*>(.*?)</span>", RegexOptions.Singleline).Groups[1].Value;
+                    Check(fieldHtml == errorCase.Error && Regex.Matches(summaryHtml, Regex.Escape(errorCase.Error)).Count == 1,
+                        label + " has the exact Turkish field error and one summary entry under English locale");
+                    Check(JsonSerializer.Serialize(await checkDb.Tasks.AsNoTracking().OrderBy(t => t.Id).ToListAsync()) == beforeError,
+                        label + " leaves every stored task unchanged");
+                    var descriptionValue = Regex.Match(errorHtml, @"<textarea\b[^>]*id=""Description""[^>]*>(.*?)</textarea>", RegexOptions.Singleline).Groups[1].Value.Trim();
+                    var titleInput = Regex.Match(errorHtml, @"<input\b[^>]*id=""Title""[^>]*>").Value;
+                    var dateInput = Regex.Match(errorHtml, @"<input\b[^>]*id=""DueDate""[^>]*>").Value;
+                    Check(descriptionValue == attempted["Description"]
+                        && titleInput.Contains($"value=\"{attempted["Title"]}\"")
+                        && dateInput.Contains($"value=\"{attempted["DueDate"]}\""),
+                        label + " retains attempted title, description and date for correction");
+                }
+            }
             var maximumTitle = marker + new string('x', 120 - marker.Length);
             using var maximumResponse = await Post("/Tasks/Create", new()
             {

@@ -10,6 +10,7 @@ Bu proje, nesne yönelimli programlama prensiplerini ve ASP.NET Core MVC mimaris
 - **.NET 10**
 - **ASP.NET Core MVC**
 - **Razor Views**
+- **Entity Framework Core / Npgsql / PostgreSQL**
 - **HTML ve CSS**
 - **Git ve GitHub**
 
@@ -21,6 +22,14 @@ Bu proje, nesne yönelimli programlama prensiplerini ve ASP.NET Core MVC mimaris
 - Görev durumunu güncelleme
 - Görevlere öncelik ve tarih bilgisi atama
 - Form doğrulama ve hata yönetimi
+- Görev detayını görüntüleme ve görev bilgilerini düzenleme
+- Başlık/açıklama araması, durum ve öncelik filtreleri
+- Sıralama ve sayfalama
+- Kalıcı, benzersiz görev kodları (`WF-001` gibi)
+- Liste, oluşturma, düzenleme, detay ve hata ekranlarında ortak responsive görünüm
+- Sistem tercihinden başlayan, kullanıcı seçimini saklayan açık/koyu tema
+
+Tema düğmesi masaüstünde yan menüde, mobilde üst çubuktadır. Tarayıcı depolamasına erişilemiyorsa tema seçimi yalnızca açık sayfada geçerlidir. JavaScript kapalıyken mobil gezinme bağlantıları görünür kalır; form doğrulaması sunucuda çalışır.
 
 ## Proje Mimarisi
 
@@ -39,7 +48,7 @@ Uygulama, ASP.NET Core MVC mimarisine uygun olarak katmanlara ayrılmıştır.
 
 ## Kurulum ve Çalıştırma
 
-Projeyi çalıştırabilmek için bilgisayarınızda **.NET 10 SDK** kurulu olmalıdır.
+Projeyi çalıştırabilmek için bilgisayarınızda **.NET 10 SDK** ve erişilebilir bir **PostgreSQL** veritabanı olmalıdır. Mevcut çalışma düzeninde MVC ve Console, `RiderProjects` altında kardeş klasörlerdir.
 
 1. Repository'yi bilgisayarınıza klonlayın:
 
@@ -61,11 +70,17 @@ Projeyi çalıştırabilmek için bilgisayarınızda **.NET 10 SDK** kurulu olma
 
 4. Terminalde belirtilen yerel adresi tarayıcıda açın.
 
+Çalıştırmadan önce `ConnectionStrings:WorkFlowDb` bağlantısı User Secrets veya `ConnectionStrings__WorkFlowDb` ortam değişkeni üzerinden tanımlanmalıdır. Parola ve bağlantı bilgilerini kaynak dosyalarına veya Git'e eklemeyin. `dotnet run` migration uygulamaz; mevcut veritabanında şema değişikliği yapmadan önce yedek ve açık kullanıcı onayı gerekir.
+
 ## Veri Saklama
 
-Uygulama şu anda görevleri bellekte saklamaktadır. Bu nedenle uygulama kapatıldığında görev verileri korunmaz.
+Görevler, `WorkFlowDbContext` üzerinden PostgreSQL `Tasks` tablosunda saklanır; uygulama kapatıldığında korunur. `TaskService` görev işlemlerini ve sorguları yürütür. `Project` sınıfı şu anda yalnızca arayüzdeki proje adını taşır.
 
-Kalıcı veri saklama için ilerleyen aşamalarda veritabanı entegrasyonu yapılabilir.
+Görevlerin `Guid` kimliği korunur. Kullanıcıya gösterilen `WF-001` biçimindeki kodlar veritabanı sequence'i üzerinden üretilir; silinen numaralar yeniden kullanılmaz.
+
+## Doğrulama
+
+Release derlemesi için `dotnet build -c Release` kullanılır. Bağlantısız kontroller ve canlı veriden ayrı PostgreSQL/HTTP testleri için [test yönergelerini](Tests/README.md) izleyin. Test bağlantıları uygulamanın bağlantısından ayrıdır; canlı `workflow_db` yazma testlerinde kullanılmaz. Mobil görünüm, tema, gezinme ve klavye etkileşimleri ayrıca tarayıcıda kontrol edilir.
 
 ## Geliştirme Durumu
 

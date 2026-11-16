@@ -1,19 +1,11 @@
 @model TaskEditViewModel
-@{ ViewData["Title"] = "Görevi düzenle"; }
-<div class="page-heading">
-    <div>
-        <a class="back-link" asp-action="Details" asp-route-id="@Model.Id">← Görev detayına dön</a>
-        <p class="eyebrow">@Model.Code</p>
-        <h1>Görevi düzenle</h1>
-        <p class="muted">Görevin bilgilerini güncelle. Başlık zorunludur.</p>
-    </div>
-</div>
-<section class="card form-card">
-    <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
-        <partial name="_TaskFields" model="Model" />
-        <div class="form-actions">
-            <a class="button subtle" asp-action="Details" asp-route-id="@Model.Id">Vazgeç</a>
-            <button class="button primary" type="submit">Değişiklikleri kaydet</button>
-        </div>
+@{ ViewData["Title"] = "Görevi düzenle"; ViewData["PenPage"] = "edit"; }
+<a class="pen-back" asp-action="Details" asp-route-id="@Model.Id"><partial name="_PenIcon" model='"back"' />Görev detayına dön</a>
+<div class="pen-heading"><div><p class="pen-eyebrow">@Model.Code</p><h1>Görevi düzenle.</h1><p>Görev bilgilerini güncelle ve değişiklikleri kaydet.</p></div></div>
+<section class="pen-form-card pen-edit-card" aria-labelledby="form-heading">
+    <header><span class="pen-form-icon"><partial name="_PenIcon" model='"clipboard"' /></span><div><h2 id="form-heading">Görev bilgileri</h2><p>* işaretli alanların doldurulması zorunludur.</p></div></header>
+    <form asp-action="Edit" asp-route-id="@Model.Id" method="post" novalidate>
+        <partial name="_PenCreateFields" model="Model" />
+        <div class="pen-form-actions"><a class="pen-button pen-secondary" asp-action="Details" asp-route-id="@Model.Id">Vazgeç</a><button class="pen-button pen-primary" type="submit"><partial name="_PenIcon" model='"check"' />Değişiklikleri kaydet</button></div>
     </form>
 </section>

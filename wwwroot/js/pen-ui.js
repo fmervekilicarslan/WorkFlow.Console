@@ -1,15 +1,39 @@
 (() => {
     'use strict';
+    const themeButtons = document.querySelectorAll('[data-theme-toggle]');
+    const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+    let themePreference = null;
+    try { themePreference = localStorage.getItem('workflow-theme'); } catch { /* Depolama erişimi isteğe bağlıdır. */ }
+    if (themePreference !== 'light' && themePreference !== 'dark') themePreference = null;
+    const applyTheme = theme => {
+        document.documentElement.dataset.theme = theme;
+        themeButtons.forEach(button => {
+            const label = theme === 'dark' ? 'Açık temaya geç' : 'Koyu temaya geç';
+            button.textContent = button.classList.contains('pen-mobile-theme') ? (theme === 'dark' ? 'Açık' : 'Koyu') : label;
+            button.setAttribute('aria-label', label);
+        });
+    };
+    applyTheme(themePreference || (themeMedia.matches ? 'dark' : 'light'));
+    themeButtons.forEach(button => {
+        button.hidden = false;
+        button.addEventListener('click', () => {
+            themePreference = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+            applyTheme(themePreference);
+            try { localStorage.setItem('workflow-theme', themePreference); } catch { /* Oturum boyunca seçim korunur. */ }
+        });
+    });
+    themeMedia.addEventListener?.('change', event => { if (!themePreference) applyTheme(event.matches ? 'dark' : 'light'); });
     document.querySelectorAll('[data-dismiss-notice]').forEach(button => {
         button.addEventListener('click', () => button.closest('.pen-notice').remove());
     });
     const menuButton = document.querySelector('[data-mobile-menu]');
     const navigation = document.getElementById('mobile-navigation');
     if (menuButton && navigation) {
-        const closeMenu = () => { navigation.hidden = true; menuButton.setAttribute('aria-expanded', 'false'); };
+        const closeMenu = () => { navigation.hidden = true; menuButton.setAttribute('aria-expanded', 'false'); menuButton.setAttribute('aria-label', 'Gezinme menüsünü aç'); };
         menuButton.addEventListener('click', () => {
             navigation.hidden = !navigation.hidden;
             menuButton.setAttribute('aria-expanded', String(!navigation.hidden));
+            menuButton.setAttribute('aria-label', navigation.hidden ? 'Gezinme menüsünü aç' : 'Gezinme menüsünü kapat');
         });
         document.addEventListener('keydown', event => {
             if (event.key === 'Escape' && !navigation.hidden) { closeMenu(); menuButton.focus(); }
