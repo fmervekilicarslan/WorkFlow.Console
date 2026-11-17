@@ -1,0 +1,80 @@
+@model CalendarViewModel
+@using System.Globalization
+@{
+    ViewData["Title"] = "Takvim";
+    ViewData["PenPage"] = "calendar";
+    ViewData["CalendarToday"] = Model.Today;
+    var tr = CultureInfo.GetCultureInfo("tr-TR");
+    string Iso(DateOnly date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    string StatusText(Status status) => status switch { Status.Todo => "Yapılacak", Status.InProgress => "Devam ediyor", _ => "Tamamlandı" };
+    string PriorityText(Priority priority) => priority == Priority.Normal ? "Medium" : priority.ToString();
+    string? CalendarUrl(string view, DateOnly date, int undatedPage = 1) => Url.Action("Index", "Calendar", new Microsoft.AspNetCore.Routing.RouteValueDictionary {
+        ["view"] = view, ["date"] = Iso(date), ["Filter.Search"] = Model.Filter.Search,
+        ["Filter.Status"] = Model.Filter.Status, ["Filter.Priority"] = Model.Filter.Priority,
+        ["Filter.UndatedPage"] = undatedPage
+    });
+    var heading = Model.ViewMode == "month" ? Model.SelectedDate.ToString("MMMM yyyy", tr)
+        : Model.ViewMode == "week" ? $"{Model.StartDate.ToString("d MMMM", tr)} – {Model.EndDateExclusive.AddDays(-1).ToString("d MMMM yyyy", tr)}"
+        : Model.SelectedDate.ToString("d MMMM yyyy, dddd", tr);
+}
+<div class="pen-mobile-context">Takvim</div>
+<div class="pen-heading"><div><p class="pen-eyebrow">WORKFLOW PROJESİ</p><h1>Takvim</h1><p>Son teslim tarihlerini bir arada gör.</p></div></div>
+<section class="pen-calendar-panel" data-calendar-view="@Model.ViewMode" aria-label="Görev takvimi">
+    <div class="pen-calendar-toolbar">
+        <div class="pen-calendar-navigation" aria-label="Tarih gezinmesi">
+            @if (Model.PreviousDate.HasValue) { <a class="pen-button pen-secondary" href="@CalendarUrl(Model.ViewMode, Model.PreviousDate.Value, Model.Filter.UndatedPage)" aria-label="Önceki dönem">Önceki</a> }
+            <a class="pen-button pen-secondary" href="@CalendarUrl(Model.ViewMode, Model.Today, Model.Filter.UndatedPage)">Bugün</a>
+            @if (Model.NextDate.HasValue) { <a class="pen-button pen-secondary" href="@CalendarUrl(Model.ViewMode, Model.NextDate.Value, Model.Filter.UndatedPage)" aria-label="Sonraki dönem">Sonraki</a> }
+        </div>
+        <nav class="pen-view-switch" aria-label="Takvim görünümü">
+            @foreach (var option in new[] { (Value: "month", Label: "Ay"), (Value: "week", Label: "Hafta"), (Value: "day", Label: "Gün") })
+            { <a href="@CalendarUrl(option.Value, Model.SelectedDate, Model.Filter.UndatedPage)" data-calendar-choice="@option.Value" aria-current="@(Model.ViewMode == option.Value ? "page" : null)">@option.Label</a> }
+        </nav>
+    </div>
+    <form method="get" asp-controller="Calendar" asp-action="Index" class="pen-calendar-filters">
+        <input type="hidden" name="view" value="@Model.ViewMode" />
+        <div class="pen-calendar-field"><label for="calendar-date">Tarih</label><input id="calendar-date" type="date" name="date" value="@Iso(Model.SelectedDate)" min="1900-01-01" max="9998-12-31" /></div>
+        <div class="pen-calendar-field"><label asp-for="Filter.Search">Ara</label><input asp-for="Filter.Search" type="search" maxlength="200" placeholder="Görevlerde ara..." /></div>
+        <div class="pen-calendar-field"><label asp-for="Filter.Status">Durum</label><select asp-for="Filter.Status"><option value="">Tüm durumlar</option>@foreach (var status in Enum.GetValues<Status>()) { <option value="@((int)status)">@StatusText(status)</option> }</select></div>
+        <div class="pen-calendar-field"><label asp-for="Filter.Priority">Öncelik</label><select asp-for="Filter.Priority"><option value="">Tüm öncelikler</option>@foreach (var priority in Enum.GetValues<Priority>()) { <option value="@((int)priority)">@PriorityText(priority)</option> }</select></div>
+        <button type="submit" class="pen-button pen-primary">Uygula</button>
+        <a class="pen-button pen-secondary" href="@Url.Action("Index", "Calendar", new { view = Model.ViewMode, date = Iso(Model.SelectedDate) })">Temizle</a>
+        <div asp-validation-summary="All" class="pen-validation" role="alert"></div>
+    </form>
+    <div class="pen-calendar-heading"><h2>@heading</h2><p>@(Model.ViewMode == "month" ? "Ay görünümü · haftalar pazartesi başlar" : Model.ViewMode == "week" ? "Hafta görünümü · pazartesiden pazara" : "Gün görünümü")</p></div>
+    @if (!Model.Days.Any(day => day.Tasks.Count > 0)) { <p class="pen-calendar-empty">Bu dönemde filtrelere uyan tarihli görev yok.</p> }
+    <div class="pen-calendar-grid @(Model.ViewMode == "day" ? "is-day" : "")" data-calendar-grid>
+        @foreach (var day in Model.Days)
+        {
+            var supported = day.Date.Year >= 1900 && day.Date.Year <= 9998;
+            <section class="pen-calendar-day @(day.Date == Model.Today ? "is-today" : "") @(Model.ViewMode == "month" && day.Date.Month != Model.SelectedDate.Month ? "is-outside" : "")" data-calendar-day="@Iso(day.Date)" aria-label="@day.Date.ToString("d MMMM yyyy, dddd", tr)">
+                <h3>
+                    @if (supported) { <a href="@CalendarUrl("day", day.Date, Model.Filter.UndatedPage)">@day.Date.ToString("d MMM ddd", tr)</a> }
+                    else { <span>@day.Date.ToString("d MMM ddd", tr)</span> }
+                    @if (day.Date == Model.Today) { <span class="pen-calendar-today">Bugün</span> }
+                </h3>
+                @foreach (var task in Model.ViewMode == "month" ? day.Tasks.Take(3) : day.Tasks) { <partial name="_CalendarTask" model="task" /> }
+                @if (Model.ViewMode == "month" && day.Tasks.Count > 3)
+                {
+                    <details class="pen-calendar-more"><summary>+@(day.Tasks.Count - 3) görev daha<span class="pen-sr-only">, @day.Date.ToString("d MMMM yyyy", tr)</span></summary>
+                        @foreach (var task in day.Tasks.Skip(3)) { <partial name="_CalendarTask" model="task" /> }
+                    </details>
+                }
+                @if (day.Tasks.Count == 0) { <p class="pen-calendar-no-tasks">Görev yok</p> }
+            </section>
+        }
+    </div>
+    <section class="pen-calendar-undated" aria-labelledby="undated-heading">
+        <div class="pen-calendar-heading"><h2 id="undated-heading">Tarihi belirlenmemiş görevler</h2><p>@Model.UndatedTasks.TotalCount görev</p></div>
+        @if (Model.UndatedTasks.Items.Count == 0) { <p class="pen-calendar-empty">Filtrelere uyan tarihi belirlenmemiş görev yok.</p> }
+        else { <div class="pen-calendar-undated-list">@foreach (var task in Model.UndatedTasks.Items) { <partial name="_CalendarTask" model="task" /> }</div> }
+        @if (Model.UndatedTasks.TotalPages > 1)
+        {
+            <nav class="pen-pagination" aria-label="Tarihi belirlenmemiş görev sayfaları">
+                @if (Model.UndatedTasks.Page > 1) { <a href="@CalendarUrl(Model.ViewMode, Model.SelectedDate, Model.UndatedTasks.Page - 1)" rel="prev">Önceki</a> }
+                <span>Sayfa @Model.UndatedTasks.Page / @Model.UndatedTasks.TotalPages</span>
+                @if (Model.UndatedTasks.Page < Model.UndatedTasks.TotalPages) { <a href="@CalendarUrl(Model.ViewMode, Model.SelectedDate, Model.UndatedTasks.Page + 1)" rel="next">Sonraki</a> }
+            </nav>
+        }
+    </section>
+</section>

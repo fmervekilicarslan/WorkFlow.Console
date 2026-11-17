@@ -127,6 +127,10 @@ internal static class KanbanChecks
         public void GorevSil(Guid id) => throw new NotSupportedException();
         public List<TaskItem> TumGorevleriGetir(string? search = null, Status? status = null, Priority? priority = null) => throw new NotSupportedException();
         public TaskSummary OzetGetir() => throw new NotSupportedException();
+        public List<TaskItem> TakvimGorevleriniGetir(DateTime startUtc, DateTime endUtc, string? search = null,
+            Status? status = null, Priority? priority = null) => throw new NotSupportedException();
+        public TaskPage TarihsizGorevleriGetir(string? search = null, Status? status = null, Priority? priority = null,
+            int page = 1, int pageSize = 10) => throw new NotSupportedException();
         public bool GorevGuncelle(Guid id, string title, string? description, Priority priority, Status status, DateTime? dueDate) => throw new NotSupportedException();
         public TaskPage SayfaliGorevleriGetir(string? search = null, Status? status = null, Priority? priority = null,
             TaskSort sort = TaskSort.Newest, int page = 1, int pageSize = 10) => throw new NotSupportedException();

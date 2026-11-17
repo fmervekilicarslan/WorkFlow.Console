@@ -7,7 +7,7 @@ dotnet build Tests/WorkFlow.Stage1Checks/WorkFlow.Stage1Checks.csproj -c Release
 dotnet Tests/WorkFlow.Stage1Checks/bin/Release/net10.0/WorkFlow.Stage1Checks.dll
 ```
 
-Parametresiz çalıştırma: 23 mevcut kontrol ve 14 bağlantı güvenliği kontrolü; veritabanına bağlanmaz.
+Parametresiz çalıştırma: 23 mevcut kontrol, 14 bağlantı güvenliği ve 31 takvim tarih/koruma kontrolü; toplam 68 kontrol veritabanına bağlanmaz.
 
 ## Bu yerel ortamda yazma testleri
 
@@ -47,3 +47,15 @@ HTTP kapsamı üç durumun kalıcılığını yeni PostgreSQL bağlantısı ve a
 Chrome CDP kontrolleri 1440/390/320 px genişliklerde iki temayı ve yatay taşmayı; durum seçicisini, taşıma sonrası odağı, sütun sayaçlarını ve ayrı Liste yanıtındaki kalıcılığı; URL ile Liste/Pano geçişlerini, localStorage tercihini ve açık `view=list` seçiminin önceliğini; yenileme, boş pano ve eski liste filtrelerinin panoya etkisizliğini kapsar. Seçili Yapılacak filtresi, ikinci sayfa ve beş görevlik sayfa boyutuyla gerçek Liste → Pano → Liste bağlantıları tıklanır; panoda tüm görevlerin gelmesi ve listeye dönüşte üç seçeneğin korunması ayrıca doğrulanır. Sürükle-bırak testleri sentetik HTML drag/drop olayları kullanır. Sunucu 503 ve ağ hatasında geri dönüş, tarayıcıda mock fetch yanıtlarıyla doğrulanır. Fiziksel sürükleme, gerçek klavye tuşları, dokunmatik cihaz etkileşimi ve ekran görüntüsü üzerinden görsel onay bu koşunun kanıtı değildir; mobil kontroller dar masaüstü viewport ile yapılır.
 
 Koşu sonunda canlı görevler, migration geçmişi, sequence, sahiplik ve izin fingerprint'i değişmedi. Yalnız koşunun izole geçici kayıtları temizlendi; mevcut test veritabanı/rol ve normal uygulama bağlantısı korundu. QA sunucusu ve sahip olunan Chrome süreci kapatılır; geçici tarayıcı profili kaynak silmemek için tutulur.
+
+## Takvim V1 kontrolleri
+
+Takvim geliştirmesi sonrası aynı komutlarla **445/445 kontrol başarılı**: 68 bağlantısız + 16 PostgreSQL + 361 Stage2 kontrolü. Önceki 318 kontrolün tamamı korunur; 31 tarih/koruma, 34 takvim servis/SQL/HTTP ve 62 takvim Chrome kontrolü eklenmiştir. Release derlemesi sıfır hata ve uyarıyla geçti. `WORKFLOW_BROWSER_CHECKS` kapalıyken 347 kontrol çalışır. `-ExistingOnly` mevcut izole veritabanını/rolü kullanır; migration veya kaynak oluşturma moduna girmez.
+
+`CalendarDateChecks` gün/hafta/ay aralıklarını, pazartesi başlangıcını, ay dolgu günlerini, ay/yıl geçişini, artık ve normal şubat aylarını, 1900/9998 gezinme sınırlarını, İstanbul gece yarısının UTC dönüşümünü ve geçersiz servis seçeneklerinin bağlantı kurulmadan reddini doğrular.
+
+`CalendarChecks` kendi benzersiz işaretiyle 27 geçici görev oluşturur. Aralık başlangıcından bir mikrosaniye önce, başlangıçta, bitişten bir mikrosaniye önce ve bitişteki kayıtlar `[startUtc, endUtc)` sınırını gerçek PostgreSQL üzerinde kanıtlar. Gün aralığına yalnız doğru tarihli görevler girer; 12 tarihsiz görev ayrı 10+2 sayfalarda gösterilir. Arama/durum/öncelik, gecikmiş/yaklaşan/tamamlanmış göstergeleri, Details bağlantıları, Türkçe geçersiz istek mesajları, boş sonuçlar ve yoğun gündeki +7 görev ayrıntısı doğrulanır. `DbCommandInterceptor` takvim Controller çağrısının üç sorgu çalıştırdığını, görev sorgusundaki UTC parametreleri ve sunucuda yarı açık tarih filtresini, sayfalamasız tarihli sorguyu ve `AsNoTracking` davranışını ölçer.
+
+`CalendarBrowserChecks.ps1` gerçek Chrome CDP ile gün/hafta/ay görünümlerini iki temada 320/390/768/1440 px genişliklerde denetler. Görünür kartlarda iç/yatay taşma ve başlık okunabilirliği; native +N ayrıntısının açılması; tarihsiz sayfalama; filtreli görünüm bağlantıları; görünüm/tema kalıcılığı; açık görünümün kayıtlı tercihe önceliği; Details ve Bugün gezinmesi; boş sonuçlar ve etkin Takvim menüsü kontrol edilir. Takvim tarayıcı akışı yalnız GET istekleri yapar. Fiziksel klavye/dokunmatik cihaz ve ekran görüntüsüne dayanan görsel onay bu koşuda yapılmadı; dar ekran kontrolleri masaüstü viewport emülasyonudur.
+
+Takvim GET/Chrome kontrollerinden önce ve sonra tüm görevlerin snapshot'ı aynı kaldı. Yalnız kendi takvim fixture kayıtları temizlenince önceki bütün kayıtlar tekrar aynıydı; dış runner da gerçek `workflow_db` görev/migration/sequence/sahiplik/izin fingerprint'inin değişmediğini doğruladı. Test veritabanı/rol, gerçek kayıtlar ve normal uygulama bağlantısı korundu.

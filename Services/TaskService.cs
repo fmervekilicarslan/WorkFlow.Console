@@ -130,6 +130,43 @@ public class TaskService : ITaskService
             .ThenBy(gorev => gorev.Id);
     }
 
+    public List<TaskItem> TakvimGorevleriniGetir(DateTime startUtc, DateTime endUtc,
+        string? search = null, Status? status = null, Priority? priority = null)
+    {
+        TakvimFiltreleriniDogrula(search, status, priority);
+        if (startUtc.Kind != DateTimeKind.Utc || endUtc.Kind != DateTimeKind.Utc || startUtc >= endUtc)
+            throw new GecersizGorevException("Geçerli bir UTC tarih aralığı seçin.");
+
+        return ListeSorgusu(search, status, priority)
+            .Where(task => task.DueDate.HasValue && task.DueDate.Value >= startUtc && task.DueDate.Value < endUtc)
+            .OrderBy(task => task.DueDate).ThenBy(task => task.CreatedDate).ThenBy(task => task.Id)
+            .ToList();
+    }
+
+    public TaskPage TarihsizGorevleriGetir(string? search = null, Status? status = null, Priority? priority = null,
+        int page = 1, int pageSize = 10)
+    {
+        TakvimFiltreleriniDogrula(search, status, priority);
+        if (page < 1 || pageSize is < 5 or > 50)
+            throw new GecersizGorevException("Tarihsiz görev sayfalama seçeneklerini kontrol edin.");
+
+        var query = ListeSorgusu(search, status, priority).Where(task => task.DueDate == null);
+        var count = query.Count();
+        page = Math.Min(page, Math.Max(1, (int)Math.Ceiling(count / (double)pageSize)));
+        return new TaskPage
+        {
+            Items = query.Skip((page - 1) * pageSize).Take(pageSize).ToList(),
+            TotalCount = count, Page = page, PageSize = pageSize
+        };
+    }
+
+    private static void TakvimFiltreleriniDogrula(string? search, Status? status, Priority? priority)
+    {
+        if (search?.Length > 200 || (status.HasValue && !Enum.IsDefined(status.Value)) ||
+            (priority.HasValue && !Enum.IsDefined(priority.Value)))
+            throw new GecersizGorevException("Takvim filtrelerini kontrol edin.");
+    }
+
     public TaskSummary OzetGetir() => _dbContext.Tasks.AsNoTracking().GroupBy(task => 1)
         .Select(group => new TaskSummary
         {

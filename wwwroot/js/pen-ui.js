@@ -204,5 +204,26 @@
             column.addEventListener('drop', event => { if (!dragged) return; event.preventDefault(); column.classList.remove('is-drop-target'); moveTask(dragged, column.dataset.boardColumn); });
         });
     }
+    const calendar = document.querySelector('[data-calendar-view]');
+    if (calendar) {
+        const calendarView = calendar.dataset.calendarView;
+        const url = new URL(window.location.href);
+        let preference = null;
+        try { preference = localStorage.getItem('workflow-calendar-view'); } catch { /* Depolama isteğe bağlıdır. */ }
+        if (!url.searchParams.has('view') && (preference === 'week' || preference === 'day')) {
+            url.searchParams.set('view', preference);
+            window.location.replace(url.href);
+        } else {
+            try { localStorage.setItem('workflow-calendar-view', calendarView); } catch { /* Depolama isteğe bağlıdır. */ }
+        }
+        calendar.querySelectorAll('[data-calendar-choice]').forEach(link => link.addEventListener('click', () => {
+            try { localStorage.setItem('workflow-calendar-view', link.dataset.calendarChoice); } catch { /* Bağlantı yine de çalışır. */ }
+        }));
+        window.addEventListener('pageshow', event => {
+            if (event.persisted) {
+                try { localStorage.setItem('workflow-calendar-view', calendarView); } catch { /* Depolama isteğe bağlıdır. */ }
+            }
+        });
+    }
     document.querySelector('[data-validation-alert]')?.focus();
 })();

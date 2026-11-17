@@ -1,0 +1,19 @@
+@model WorkFlow.Mvc.Models.TaskItem
+@using WorkFlow.Mvc.Services
+@{
+    var today = (DateOnly)ViewData["CalendarToday"]!;
+    var status = Model.Status == Status.Todo ? "Yapılacak" : Model.Status == Status.InProgress ? "Devam ediyor" : "Tamamlandı";
+    var priority = Model.Priority == Priority.Normal ? "Medium" : Model.Priority.ToString();
+}
+<article class="pen-calendar-task">
+    <span class="pen-task-code">@Model.Code</span>
+    <a asp-controller="Tasks" asp-action="Details" asp-route-id="@Model.Id">@Model.Title</a>
+    <div class="pen-calendar-task-meta"><span class="pen-priority priority-@Model.Priority.ToString().ToLowerInvariant()">@priority</span><span>@status</span></div>
+    @if (Model.DueDate.HasValue)
+    {
+        <span class="pen-calendar-date">Son tarih: @TaskDates.LocalDate(Model.DueDate.Value).ToString("dd.MM.yyyy")</span>
+        @if (TaskDates.IsOverdue(Model.DueDate, Model.Status, today)) { <span class="pen-overdue">Gecikmiş</span> }
+        else if (TaskDates.IsUpcoming(Model.DueDate, Model.Status, today)) { <span class="pen-upcoming">@(TaskDates.LocalDate(Model.DueDate.Value) == today ? "Bugün" : "Yaklaşıyor")</span> }
+    }
+    else { <span class="pen-calendar-date">Son tarih belirlenmedi</span> }
+</article>

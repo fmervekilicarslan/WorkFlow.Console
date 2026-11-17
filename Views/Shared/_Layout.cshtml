@@ -1,6 +1,7 @@
 @{
     var penPage = ViewData["PenPage"] as string;
     var isCreate = penPage == "create";
+    var isCalendar = penPage == "calendar";
     var pageTitle = ViewData["Title"] as string;
 }
 <!DOCTYPE html>
@@ -24,9 +25,10 @@
             <a class="pen-brand" asp-controller="Tasks" asp-action="Index"><span><partial name="_PenIcon" model='"workflow"' /></span>WorkFlow</a>
             <p class="pen-menu-label">ÇALIŞMA ALANI</p>
             <nav aria-label="Çalışma alanı">
-                <a class="@(!isCreate ? "active" : "")" asp-controller="Tasks" asp-action="Index" aria-current="@(penPage == "index" ? "page" : null)"><partial name="_PenIcon" model='"list"' />Görevler
+                <a class="@(!isCreate && !isCalendar ? "active" : "")" asp-controller="Tasks" asp-action="Index" aria-current="@(penPage == "index" ? "page" : null)"><partial name="_PenIcon" model='"list"' />Görevler
                     @if (ViewData["TaskCount"] is int taskCount) { <span class="pen-nav-count">@taskCount</span> }
                 </a>
+                <a class="@(isCalendar ? "active" : "")" asp-controller="Calendar" asp-action="Index" aria-current="@(isCalendar ? "page" : null)"><partial name="_PenIcon" model='"clipboard"' />Takvim</a>
                 <a class="@(isCreate ? "active" : "")" asp-controller="Tasks" asp-action="Create" aria-current="@(isCreate ? "page" : null)"><partial name="_PenIcon" model='"circle-plus"' />Yeni görev</a>
             </nav>
             <div class="pen-sidebar-note"><partial name="_PenIcon" model='"layers"' /><strong>Daha az karmaşa.</strong><p>Görevlerini düzenle,<br />önemli olana odaklan.</p></div>
@@ -36,14 +38,14 @@
             <header class="pen-mobile-header">
                 <a class="pen-brand" asp-controller="Tasks" asp-action="Index"><span><partial name="_PenIcon" model='"workflow"' /></span>WorkFlow</a>
                 <button class="pen-icon-button" type="button" data-mobile-menu aria-controls="mobile-navigation" aria-expanded="false" aria-label="Gezinme menüsünü aç"><partial name="_PenIcon" model='"menu"' /></button>
-                <nav id="mobile-navigation" aria-label="Mobil gezinme" hidden><a asp-controller="Tasks" asp-action="Index">Görevler</a><a asp-controller="Tasks" asp-action="Create">Yeni görev</a></nav>
-                <noscript><nav class="pen-noscript-nav" aria-label="Mobil gezinme"><a asp-controller="Tasks" asp-action="Index">Görevler</a><a asp-controller="Tasks" asp-action="Create">Yeni görev</a></nav></noscript>
+                <nav id="mobile-navigation" aria-label="Mobil gezinme" hidden><a asp-controller="Tasks" asp-action="Index">Görevler</a><a asp-controller="Calendar" asp-action="Index" aria-current="@(isCalendar ? "page" : null)">Takvim</a><a asp-controller="Tasks" asp-action="Create">Yeni görev</a></nav>
+                <noscript><nav class="pen-noscript-nav" aria-label="Mobil gezinme"><a asp-controller="Tasks" asp-action="Index">Görevler</a><a asp-controller="Calendar" asp-action="Index">Takvim</a><a asp-controller="Tasks" asp-action="Create">Yeni görev</a></nav></noscript>
                 <div class="pen-theme-selector pen-mobile-theme" role="group" aria-label="Tema seçimi" data-theme-selector hidden>
                     <button type="button" data-theme-choice="light" aria-label="Açık tema" aria-pressed="false"><partial name="_PenIcon" model='"sun"' /></button>
                     <button type="button" data-theme-choice="dark" aria-label="Koyu tema" aria-pressed="false"><partial name="_PenIcon" model='"moon"' /></button>
                 </div>
             </header>
-            <header class="pen-topbar"><div><partial name="_PenIcon" model='"house"' /><span>/</span>@if (penPage == "index") { <span aria-current="page">Görevler</span> } else { <a asp-controller="Tasks" asp-action="Index">Görevler</a><span>/</span><span aria-current="page">@pageTitle</span> }</div><div class="pen-topbar-actions"><small>GÖREV YÖNETİMİ</small><div class="pen-theme-selector" role="group" aria-label="Tema seçimi" data-theme-selector hidden><button type="button" data-theme-choice="light" aria-label="Açık tema" aria-pressed="false"><partial name="_PenIcon" model='"sun"' /></button><button type="button" data-theme-choice="dark" aria-label="Koyu tema" aria-pressed="false"><partial name="_PenIcon" model='"moon"' /></button></div></div></header>
+            <header class="pen-topbar"><div><partial name="_PenIcon" model='"house"' /><span>/</span>@if (penPage == "index") { <span aria-current="page">Görevler</span> } else if (isCalendar) { <span aria-current="page">Takvim</span> } else { <a asp-controller="Tasks" asp-action="Index">Görevler</a><span>/</span><span aria-current="page">@pageTitle</span> }</div><div class="pen-topbar-actions"><small>GÖREV YÖNETİMİ</small><div class="pen-theme-selector" role="group" aria-label="Tema seçimi" data-theme-selector hidden><button type="button" data-theme-choice="light" aria-label="Açık tema" aria-pressed="false"><partial name="_PenIcon" model='"sun"' /></button><button type="button" data-theme-choice="dark" aria-label="Koyu tema" aria-pressed="false"><partial name="_PenIcon" model='"moon"' /></button></div></div></header>
             <main id="main-content" class="pen-main">@RenderBody()</main>
         </div>
     </div>

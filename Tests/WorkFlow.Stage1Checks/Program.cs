@@ -73,3 +73,4 @@ entity.FindProperty("CodeNumber")!.PropertyInfo!.SetValue(task, 1001L);
 Check(task.Code == "WF-1001" && task.Id != Guid.Empty, "Code grows beyond three digits while retaining Guid identity");
 Console.WriteLine($"{checks} checks passed. Database was not contacted.");
 IsolationChecks.Run();
+CalendarDateChecks.Run();

@@ -30,6 +30,7 @@ Bu proje, nesne yönelimli programlama prensiplerini ve ASP.NET Core MVC mimaris
 - Kalıcı, benzersiz görev kodları (`WF-001` gibi)
 - Liste, oluşturma, düzenleme, detay ve hata ekranlarında ortak responsive görünüm
 - Sistem tercihinden başlayan, kullanıcı seçimini saklayan açık/koyu tema
+- Pazartesi başlayan Gün / Hafta / Ay takvimi ve ayrı tarihsiz görev bölümü
 
 Güneş/ay tema seçicisi masaüstünde üst çubuğun sağında, mobilde hamburger menüsünün yanındadır. Seçili tema mor vurguyla belirtilir; seçenekler klavyeyle kullanılabilir. Tarayıcı depolamasına erişilemiyorsa tema seçimi yalnızca açık sayfada geçerlidir. JavaScript kapalıyken mobil gezinme bağlantıları görünür kalır; form doğrulaması sunucuda çalışır.
 
@@ -38,6 +39,14 @@ Görevler sayfasındaki **Liste / Pano** bağlantılarıyla görünümü değiş
 Görünüm URL'de `view=list` veya `view=board` ile belirlenir; açık URL seçimi önceliklidir. Tarayıcıda saklanan görünüm tercihi, görünüm belirtilmeden görev sayfasına dönüldüğünde kullanılır. Depolama kullanılamıyorsa URL ve görünüm bağlantıları çalışır. Her istekte yalnız aktif görünümün görevleri sorgulanır; pano tek bir izlenmeyen (`AsNoTracking`) görev sorgusu ve ortak özet sorgusunu kullanır. Liste mevcut sayfalı sorgusunu korur. Pano tüm eşleşmeleri yüklediğinden çok büyük görev kümelerinde kart çizim maliyeti ayrıca değerlendirilmelidir.
 
 Kartı başka sütuna sürükleyebilir veya karttaki durum alanını kullanabilirsiniz. Güncelleme CSRF korumalı MVC endpoint'i üzerinden mevcut `TaskService` ile PostgreSQL'e kaydedilir. Başarısız istekte kart önceki durumuna döner ve Türkçe hata gösterilir. Pano etkileşimleri JavaScript gerektirir; mevcut liste formuyla durum güncelleme kullanılmaya devam edilebilir. Kanban için yeni migration gerekmez.
+
+## Görev Takvimi V1
+
+Menüdeki **Takvim** bağlantısı `/Calendar` sayfasını açar. Varsayılan görünüm **Ay**dır; **Gün / Hafta / Ay** bağlantıları, **Önceki / Bugün / Sonraki** kontrolleriyle tarih aralığını değiştirebilirsiniz. Görünüm tercihi tarayıcıda saklanır; URL'deki açık `view=day|week|month` seçimi önceliklidir. Arama, durum ve öncelik filtreleri tarih ve görünüm bağlamını korur.
+
+Haftalar pazartesi başlar. Ay ızgarasındaki yoğun günlerde ilk üç görev gösterilir; kalanlar klavyeyle de açılabilen **+N görev** genişletme alanındadır. Görev kartları mevcut detay sayfasına gider. Teslim tarihi olmayan görevler ayrı bölümde, sayfalı olarak gösterilir; takvim günlerine yerleştirilmez. Bugün ve tamamlanmamış gecikmiş/yaklaşan görevler vurgulanır; tamamlananlar gecikmiş sayılmaz.
+
+Tarih aralıkları İstanbul yerel günlerinden mevcut `TaskDates` dönüşümleriyle UTC'ye çevrilir. Veritabanı sorgusu başlangıç dahil, bitiş hariç aralık kullanır; kayıtların UTC teslim tarihleri doğru yerel güne gruplanır. Seçili tarihler mevcut form sınırlarıyla uyumlu olarak 1900–9998 yılları arasındadır. Takvim V1 yalnız okur; takvimden sürükleyerek teslim tarihi değiştirme içermez ve yeni migration gerektirmez.
 
 ## Proje Mimarisi
 

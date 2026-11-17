@@ -276,6 +276,7 @@ internal static class Stage2Checks
             fields = new() { ["gorevId"] = httpTask.Id.ToString(), ["Filter.Search"] = marker, ["Filter.Sort"] = "Oldest", ["Filter.Page"] = "2", ["__RequestVerificationToken"] = Token(list) };
             using var delete = await Post("/Tasks/Delete", fields);
             Check(delete.StatusCode == HttpStatusCode.Redirect && delete.Headers.Location!.ToString().Contains("Filter.Page=2") && !await httpDb.Tasks.AnyAsync(t => t.Id == httpTask.Id), "HTTP deletion preserves list context and removes only test task");
+            count += await CalendarChecks.Run(client, Open);
         }
         finally
         {
