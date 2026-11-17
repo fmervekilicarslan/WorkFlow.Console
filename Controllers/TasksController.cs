@@ -6,6 +6,7 @@ using WorkFlow.Mvc.Models;
 using WorkFlow.Mvc.ViewModels;
 using WorkFlow.Mvc.Services;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace WorkFlow.Mvc.Controllers;
 
@@ -233,6 +234,50 @@ public class TasksController : Controller
             TempData["Error"] = "Durum kaydedilemedi. Listeyi yenileyip tekrar deneyin.";
         }
         return ReturnToList(filter);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult UpdateBoardStatus(Guid? gorevId, Status? yeniDurum)
+    {
+        if (!ModelState.IsValid || !gorevId.HasValue || gorevId.Value == Guid.Empty ||
+            !yeniDurum.HasValue || !Enum.IsDefined(yeniDurum.Value))
+        {
+            return BadRequest(new { success = false, message = "Geçerli bir görev ve durum seçin." });
+        }
+
+        try
+        {
+            if (_taskService.GorevGetir(gorevId.Value) is null)
+                return NotFound(new { success = false, message = "Güncellenecek görev bulunamadı. Panoyu yenileyin." });
+
+            _taskService.GorevDurumunuGuncelle(gorevId.Value, yeniDurum.Value);
+            return Ok(new
+            {
+                success = true,
+                taskId = gorevId.Value,
+                status = (int)yeniDurum.Value,
+                message = "Görev durumu güncellendi."
+            });
+        }
+        catch (GecersizGorevException)
+        {
+            return NotFound(new { success = false, message = "Güncellenecek görev bulunamadı. Panoyu yenileyin." });
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { success = false, message = "Görev başka bir işlemde değişti. Panoyu yenileyip tekrar deneyin." });
+        }
+        catch (DbUpdateException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { success = false, message = "Durum kaydedilemedi. Lütfen tekrar deneyin." });
+        }
+        catch (NpgsqlException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { success = false, message = "Veritabanına ulaşılamadı. Lütfen tekrar deneyin." });
+        }
     }
 
     private IActionResult ReturnToList(TaskFilterViewModel? filter) => RedirectToAction(nameof(Index),

@@ -28,3 +28,22 @@ Betik sırasıyla `--prepare-test-database`, `--database` ve `--stage2` modları
 Canlı `workflow_db` görevleri, migration geçmişi, sequence durumu ve public şema/nesne sahipliği/izinleri READ ONLY transaction içinde özetlenip önce/sonra karşılaştırılır. Eşzamanlı kullanıcı işlemi de fark yaratabilir; fark varsa incelemeden devam etmeyin. Bu karşılaştırma yedek veya tam sunucu denetimi değildir.
 
 Bu testler tarayıcı etkileşimi çalıştırmaz. Mobil menü, modal klavye davranışı, ekran genişlikleri ve yerleşik tarayıcı doğrulama mesajları için ayrıca tarayıcı kontrolleri gerekir.
+
+## Kanban kontrolleri
+
+Kanban geliştirmesi için mevcut test veritabanını ve rolünü kullanın; aşağıdaki seçenek yeni kaynak oluşturmaz ve migration hazırlama modunu çağırmaz. Şifreli yerel test bağlantısı yoksa durur.
+
+```powershell
+dotnet build Tests/WorkFlow.Stage1Checks/WorkFlow.Stage1Checks.csproj -c Release --no-restore
+dotnet Tests/WorkFlow.Stage1Checks/bin/Release/net10.0/WorkFlow.Stage1Checks.dll
+$env:WORKFLOW_BROWSER_CHECKS = '1'
+.\Tests\Run-IsolatedChecks.ps1 -ExistingOnly
+```
+
+Son doğrulama: **288/288 kontrol başarılı**. Dağılım: 23 mevcut bağlantısız + 14 izolasyon + 16 PostgreSQL + 152 mevcut servis/HTTP + 52 Kanban + 31 Chrome tarayıcı kontrolü. Release derlemesi sıfır hata ve uyarıyla geçti. Tarayıcı seçeneği kapalıyken toplam 257 kontroldür. Chrome tarayıcı kontrolleri Windows'ta yerel Google Chrome gerektirir; Stage2'nin izole bağlantılı kendi sunucusunu kullanır ve yalnız o koşunun oluşturduğu test görevinin durumunu değiştirir.
+
+Yeni HTTP kapsamı üç durumun kalıcılığını yeni PostgreSQL bağlantısı ve yenilenen HTML ile; liste/pano kimlik kümelerini filtreli ve sayfalı istek üzerinde; eksik/geçersiz durum ve görev kimliğini; CSRF ve bulunamayan görevi doğrular. Controller'ın concurrency, kayıt ve bağlantı hatası eşlemeleri sahte servisle test edilir; bu kontroller gerçek PostgreSQL arızası oluşturmaz.
+
+Chrome CDP kontrolleri 1440/390/320 px genişliklerde iki temayı ve yatay taşmayı; durum seçicisini, taşıma sonrası odağı, sütun sayaçlarını ve liste senkronunu; Liste/Pano ve tema kalıcılığını; yenileme, boş pano ve filtre davranışını kapsar. Sürükle-bırak testleri sentetik HTML drag/drop olayları kullanır. Sunucu 503 ve ağ hatasında geri dönüş, tarayıcıda mock fetch yanıtlarıyla doğrulanır. Fiziksel sürükleme, gerçek klavye tuşları, dokunmatik cihaz etkileşimi ve ekran görüntüsü üzerinden görsel onay bu koşunun kanıtı değildir; mobil kontroller dar masaüstü viewport ile yapılır.
+
+Koşu sonunda canlı görevler, migration geçmişi, sequence, sahiplik ve izin fingerprint'i değişmedi. Yalnız koşunun izole geçici kayıtları temizlendi; mevcut test veritabanı/rol ve normal uygulama bağlantısı korundu. QA sunucusu ve sahip olunan Chrome süreci kapatılır; geçici tarayıcı profili kaynak silmemek için tutulur.

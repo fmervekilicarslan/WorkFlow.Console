@@ -18,6 +18,8 @@ Bu proje, nesne yönelimli programlama prensiplerini ve ASP.NET Core MVC mimaris
 
 - Yeni görev oluşturma
 - Mevcut görevleri listeleme
+- Kalıcı Liste / Pano görünüm seçimi ve üç sütunlu Kanban panosu
+- Kanban kartlarında sürükle-bırak veya durum seçimiyle güvenli, kalıcı durum güncelleme
 - Görev silme
 - Görev durumunu güncelleme
 - Görevlere öncelik ve tarih bilgisi atama
@@ -30,6 +32,10 @@ Bu proje, nesne yönelimli programlama prensiplerini ve ASP.NET Core MVC mimaris
 - Sistem tercihinden başlayan, kullanıcı seçimini saklayan açık/koyu tema
 
 Güneş/ay tema seçicisi masaüstünde üst çubuğun sağında, mobilde hamburger menüsünün yanındadır. Seçili tema mor vurguyla belirtilir; seçenekler klavyeyle kullanılabilir. Tarayıcı depolamasına erişilemiyorsa tema seçimi yalnızca açık sayfada geçerlidir. JavaScript kapalıyken mobil gezinme bağlantıları görünür kalır; form doğrulaması sunucuda çalışır.
+
+Görevler sayfasındaki **Liste / Pano** seçicisiyle görünümü değiştirebilirsiniz. Pano, mevcut `Todo`, `InProgress`, `Completed` durumlarını **Yapılacak**, **Devam Ediyor**, **Tamamlandı** sütunlarında gösterir. Liste ve pano aynı arama, filtre ve sayfalama sonucunu kullanır; pano bütün veritabanını tek sayfada yüklemez. Görünüm tercihi tarayıcıda saklanır; depolama kullanılamıyorsa yalnız açık sayfada geçerlidir.
+
+Kartı başka sütuna sürükleyebilir veya karttaki durum alanını kullanabilirsiniz. Güncelleme CSRF korumalı MVC endpoint'i üzerinden mevcut `TaskService` ile PostgreSQL'e kaydedilir. Başarısız istekte kart önceki durumuna döner ve Türkçe hata gösterilir. Pano etkileşimleri JavaScript gerektirir; mevcut liste formuyla durum güncelleme kullanılmaya devam edilebilir. Kanban için yeni migration gerekmez.
 
 ## Proje Mimarisi
 

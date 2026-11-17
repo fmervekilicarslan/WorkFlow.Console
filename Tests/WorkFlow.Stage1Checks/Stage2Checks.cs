@@ -254,6 +254,25 @@ internal static class Stage2Checks
             Check(list.Contains("rel=\"next\"") && list.Contains("Filter.Search=") && list.Contains("Filter.Sort=Oldest") && list.Contains("Filter.Status=Todo"), "Pagination links retain search, status and sorting");
             var badFilter = await Get("/Tasks?Filter.Sort=999&Filter.Page=0");
             Check(badFilter.Contains("validation-summary-errors"), "Invalid query options show validation errors");
+            count += await KanbanChecks.Run(client, httpTask.Id, Open);
+            if (Environment.GetEnvironmentVariable("WORKFLOW_BROWSER_CHECKS") == "1")
+            {
+                var browserStart = new ProcessStartInfo("powershell") { UseShellExecute = false, CreateNoWindow = true,
+                    RedirectStandardOutput = true, RedirectStandardError = true };
+                foreach (var argument in new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+                    Path.Combine(Directory.GetCurrentDirectory(), "Tests", "KanbanBrowserChecks.ps1"),
+                    "-BaseUrl", client.BaseAddress!.ToString().TrimEnd('/'), "-TaskId", httpTask.Id.ToString() })
+                    browserStart.ArgumentList.Add(argument);
+                using var browser = Process.Start(browserStart)!;
+                var browserOutput = browser.StandardOutput.ReadToEndAsync();
+                var browserErrors = browser.StandardError.ReadToEndAsync();
+                await browser.WaitForExitAsync();
+                var output = await browserOutput;
+                Console.Write(output);
+                if (browser.ExitCode != 0)
+                    throw new InvalidOperationException("Kanban browser checks failed: " + await browserErrors);
+                count += Regex.Matches(output, "(?m)^PASS:").Count;
+            }
             fields = new() { ["gorevId"] = httpTask.Id.ToString(), ["Filter.Search"] = marker, ["Filter.Sort"] = "Oldest", ["Filter.Page"] = "2", ["__RequestVerificationToken"] = Token(list) };
             using var delete = await Post("/Tasks/Delete", fields);
             Check(delete.StatusCode == HttpStatusCode.Redirect && delete.Headers.Location!.ToString().Contains("Filter.Page=2") && !await httpDb.Tasks.AnyAsync(t => t.Id == httpTask.Id), "HTTP deletion preserves list context and removes only test task");

@@ -1,11 +1,12 @@
 # Windows / Docker Desktop runner. No User Secrets, live writes or automatic database deletion.
 [CmdletBinding()]
-param()
+param([switch]$ExistingOnly)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $projectRoot
 $statePath = Join-Path $projectRoot '.local-checkpoints/isolated-tests.clixml'
+if ($ExistingOnly -and -not (Test-Path -LiteralPath $statePath)) { throw 'Existing isolated test configuration required; refusing to create resources.' }
 $testDll = Join-Path $projectRoot 'Tests/WorkFlow.Stage1Checks/bin/Release/net10.0/WorkFlow.Stage1Checks.dll'
 if (-not (Test-Path -LiteralPath $testDll)) { throw 'Build Release tests before provisioning.' }
 $portMapping = & docker port workflow-postgres 5432/tcp
@@ -75,7 +76,8 @@ COMMIT;
     if ($liveAccess -ne 't') { throw 'Test role has access to live objects; stopping without modifying live permissions.' }
     Write-Output 'PASS: Test role has no live table, sequence or schema/database creation privileges.'
     [Environment]::SetEnvironmentVariable('WORKFLOW_TEST_CONNECTION', $connectionValue, 'Process')
-    foreach ($mode in @('--prepare-test-database', '--database', '--stage2')) {
+    $modes = if ($ExistingOnly) { @('--database', '--stage2') } else { @('--prepare-test-database', '--database', '--stage2') }
+    foreach ($mode in $modes) {
         & dotnet $testDll $mode
         if ($LASTEXITCODE -ne 0) { throw "Isolated test mode failed: $mode" }
     }

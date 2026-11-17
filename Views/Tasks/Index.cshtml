@@ -21,9 +21,9 @@
 <partial name="_PenFeedback" />
 <section class="pen-summary" aria-label="Tüm görevlerin özeti">
     <div><span class="pen-metric-icon total"><partial name="_PenIcon" model='"layers"' /></span><div><strong>@Model.Summary.Total</strong><span>Toplam görev</span></div></div>
-    <div><span class="pen-metric-icon todo"><partial name="_PenIcon" model='"circle"' /></span><div><strong>@Model.Summary.Todo</strong><span>Yapılacak</span></div></div>
-    <div><span class="pen-metric-icon progress"><partial name="_PenIcon" model='"progress"' /></span><div><strong>@Model.Summary.InProgress</strong><span>Devam ediyor</span></div></div>
-    <div><span class="pen-metric-icon completed"><partial name="_PenIcon" model='"check-circle"' /></span><div><strong>@Model.Summary.Completed</strong><span>Tamamlandı</span></div></div>
+    <div><span class="pen-metric-icon todo"><partial name="_PenIcon" model='"circle"' /></span><div><strong data-summary-status="0">@Model.Summary.Todo</strong><span>Yapılacak</span></div></div>
+    <div><span class="pen-metric-icon progress"><partial name="_PenIcon" model='"progress"' /></span><div><strong data-summary-status="1">@Model.Summary.InProgress</strong><span>Devam ediyor</span></div></div>
+    <div><span class="pen-metric-icon completed"><partial name="_PenIcon" model='"check-circle"' /></span><div><strong data-summary-status="2">@Model.Summary.Completed</strong><span>Tamamlandı</span></div></div>
 </section>
 <section class="pen-task-panel" aria-label="Görev listesi">
     <div class="pen-table-toolbar">
@@ -53,6 +53,14 @@
             <button class="pen-button pen-primary" type="submit">Uygula</button><a asp-action="Index" class="pen-button pen-secondary">Temizle</a>
         </form>
     </details>
+    <div class="pen-view-toolbar" data-view-controls hidden>
+        <div class="pen-view-switch" role="group" aria-label="Görev görünümü">
+            <button type="button" data-task-view="list" aria-pressed="true">Liste</button>
+            <button type="button" data-task-view="board" aria-pressed="false">Pano</button>
+        </div>
+        <p>Görünüm, seçili filtreleri ve geçerli sayfadaki görevleri gösterir.</p>
+    </div>
+    <div data-list-view>
     @if (Model.Tasks.Count == 0)
     {
         <div class="pen-empty">
@@ -71,15 +79,15 @@
             <tbody>
             @foreach (var task in Model.Tasks)
             {
-                <tr class="pen-task-row">
+                <tr class="pen-task-row" data-list-task="@task.Id">
                     <td class="pen-task-info">
                         <div class="pen-task-title"><span class="pen-task-code">@task.Code</span><a asp-action="Details" asp-route-id="@task.Id">@task.Title</a></div>
                         @if (!string.IsNullOrWhiteSpace(task.Description)) { <p>@task.Description</p> }
                         @if (task.DueDate.HasValue)
                         {
                             <div class="pen-due">Son tarih: @TaskDates.LocalDate(task.DueDate.Value).ToString("dd.MM.yyyy")
-                                @if (TaskDates.IsOverdue(task.DueDate,task.Status,Model.Today)) { <span class="pen-overdue">Gecikmiş</span> }
-                                else if(TaskDates.IsUpcoming(task.DueDate,task.Status,Model.Today)) { <span class="pen-upcoming">@(TaskDates.LocalDate(task.DueDate.Value) == Model.Today ? "Bugün" : "Yaklaşıyor")</span> }
+                                @if (TaskDates.IsOverdue(task.DueDate,Status.Todo,Model.Today)) { <span class="pen-overdue" data-due-indicator hidden="@(task.Status == Status.Completed)">Gecikmiş</span> }
+                                else if(TaskDates.IsUpcoming(task.DueDate,Status.Todo,Model.Today)) { <span class="pen-upcoming" data-due-indicator hidden="@(task.Status == Status.Completed)">@(TaskDates.LocalDate(task.DueDate.Value) == Model.Today ? "Bugün" : "Yaklaşıyor")</span> }
                             </div>
                         }
                     </td>
@@ -106,6 +114,38 @@
             </tbody>
         </table>
     }
+    </div>
+    <div class="pen-board-wrap" data-board-view data-update-url="@Url.Action("UpdateBoardStatus")" data-filter-status="@(Model.Filter.Status.HasValue ? ((int)Model.Filter.Status.Value).ToString() : "")" hidden>
+        <form data-board-token method="post">@Html.AntiForgeryToken()</form>
+        <p class="pen-board-message" data-board-message role="status" aria-live="polite"></p>
+        <div class="pen-board" aria-label="Görev panosu">
+            @foreach (var status in Enum.GetValues<Status>())
+            {
+                var columnTasks = Model.Tasks.Where(task => task.Status == status).ToList();
+                <section class="pen-board-column" data-board-column="@((int)status)" aria-labelledby="board-heading-@status">
+                    <h2 id="board-heading-@status"><span>@StatusText(status)</span><span class="pen-board-count" data-board-count>@columnTasks.Count</span></h2>
+                    <div class="pen-board-cards" data-board-cards>
+                        @foreach (var task in columnTasks)
+                        {
+                            <article class="pen-board-card" draggable="true" data-board-card data-task-id="@task.Id" data-status="@((int)task.Status)">
+                                <div class="pen-board-card-top"><span class="pen-task-code">@task.Code</span><span class="pen-priority priority-@task.Priority.ToString().ToLowerInvariant()">@PriorityText(task.Priority)</span></div>
+                                <a class="pen-board-title" asp-action="Details" asp-route-id="@task.Id">@task.Title</a>
+                                <p class="pen-board-due">Son tarih: @(task.DueDate.HasValue ? TaskDates.LocalDate(task.DueDate.Value).ToString("dd.MM.yyyy") : "Belirlenmedi")
+                                    @if (task.DueDate.HasValue && TaskDates.IsOverdue(task.DueDate,Status.Todo,Model.Today)) { <span class="pen-overdue" data-due-indicator hidden="@(task.Status == Status.Completed)">Gecikmiş</span> }
+                                    else if (task.DueDate.HasValue && TaskDates.IsUpcoming(task.DueDate,Status.Todo,Model.Today)) { <span class="pen-upcoming" data-due-indicator hidden="@(task.Status == Status.Completed)">@(TaskDates.LocalDate(task.DueDate.Value) == Model.Today ? "Bugün" : "Yaklaşıyor")</span> }
+                                </p>
+                                <label for="board-status-@task.Id">Durumu değiştir</label>
+                                <select id="board-status-@task.Id" data-board-status aria-label="@task.Code görev durumunu değiştir">
+                                    @foreach (var option in Enum.GetValues<Status>()) { <option value="@((int)option)" selected="@(task.Status == option)">@StatusText(option)</option> }
+                                </select>
+                            </article>
+                        }
+                    </div>
+                    <p class="pen-board-empty" data-board-empty @(columnTasks.Count > 0 ? "hidden" : null)>Bu sütunda görev yok.</p>
+                </section>
+            }
+        </div>
+    </div>
     <footer class="pen-table-footer"><span>@Model.Pagination.TotalCount sonuç · @Model.Tasks.Count görev gösteriliyor</span><span>@Html.DisplayFor(m => m.Filter.Sort)</span></footer>
     @if (Model.Pagination.TotalPages > 1)
     {

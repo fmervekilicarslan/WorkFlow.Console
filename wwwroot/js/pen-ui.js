@@ -88,5 +88,114 @@
             pendingForm.requestSubmit();
         });
     }
+    const board = document.querySelector('[data-board-view]');
+    const viewControls = document.querySelector('[data-view-controls]');
+    const list = document.querySelector('[data-list-view]');
+    if (board && viewControls && list) {
+        const viewButtons = [...viewControls.querySelectorAll('[data-task-view]')];
+        let savedView = 'list';
+        try { savedView = localStorage.getItem('workflow-task-view') === 'board' ? 'board' : 'list'; } catch { /* Depolama isteğe bağlıdır. */ }
+        const showView = view => {
+            list.hidden = view !== 'list';
+            board.hidden = view !== 'board';
+            viewButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.taskView === view)));
+            try { localStorage.setItem('workflow-task-view', view); } catch { /* Sayfa açıkken seçim kullanılabilir. */ }
+        };
+        viewButtons.forEach(button => button.addEventListener('click', () => showView(button.dataset.taskView)));
+        showView(savedView);
+        viewControls.hidden = false;
+
+        const message = board.querySelector('[data-board-message]');
+        const token = board.querySelector('[name="__RequestVerificationToken"]').value;
+        const columns = [...board.querySelectorAll('[data-board-column]')];
+        const updateCounts = () => columns.forEach(column => {
+            const count = column.querySelectorAll('[data-board-card]').length;
+            column.querySelector('[data-board-count]').textContent = count;
+            column.querySelector('[data-board-empty]').hidden = count !== 0;
+        });
+        const announce = (text, error = false) => { message.textContent = text; message.dataset.error = String(error); };
+        const moveTask = async (card, newStatus) => {
+            const oldStatus = card.dataset.status;
+            const select = card.querySelector('[data-board-status]');
+            const restoreFocus = document.activeElement === select;
+            if (card.dataset.pending === 'true') { select.value = oldStatus; return; }
+            if (oldStatus === newStatus) return;
+            const oldParent = card.parentElement;
+            const oldNext = card.nextElementSibling;
+            const target = columns.find(column => column.dataset.boardColumn === newStatus);
+            if (!target) { select.value = oldStatus; return; }
+            card.dataset.pending = 'true';
+            card.setAttribute('aria-busy', 'true');
+            card.draggable = false;
+            select.disabled = true;
+            target.querySelector('[data-board-cards]').append(card);
+            select.value = newStatus;
+            updateCounts();
+            announce('Görev durumu güncelleniyor.');
+            let failureMessage = 'Görev durumu güncellenemedi. Lütfen tekrar deneyin.';
+            const controller = new AbortController();
+            const timeout = window.setTimeout(() => controller.abort(), 15000);
+            try {
+                const data = new FormData();
+                data.append('gorevId', card.dataset.taskId);
+                data.append('yeniDurum', newStatus);
+                data.append('__RequestVerificationToken', token);
+                const response = await fetch(board.dataset.updateUrl, { method: 'POST', body: data, signal: controller.signal, headers: { 'Accept': 'application/json' } });
+                let result;
+                try { result = await response.json(); } catch { /* CSRF ve beklenmeyen yanıtlar genel hataya dönüşür. */ }
+                if (!response.ok || !result || result.success !== true) {
+                    if (typeof result?.message === 'string' && result.message) failureMessage = result.message;
+                    throw new Error('update failed');
+                }
+                card.dataset.status = newStatus;
+                const row = [...list.querySelectorAll('[data-list-task]')].find(item => item.dataset.listTask === card.dataset.taskId);
+                const listSelect = row?.querySelector('select[name="yeniDurum"]');
+                if (listSelect) {
+                    const statusNames = ['Todo', 'InProgress', 'Completed'];
+                    listSelect.value = statusNames[Number(newStatus)];
+                    listSelect.className = `status-${statusNames[Number(newStatus)].toLowerCase()}`;
+                }
+                [card, row].filter(Boolean).forEach(element => element.querySelectorAll('[data-due-indicator]').forEach(indicator => { indicator.hidden = newStatus === '2'; }));
+                const oldSummary = document.querySelector(`[data-summary-status="${oldStatus}"]`);
+                const newSummary = document.querySelector(`[data-summary-status="${newStatus}"]`);
+                if (oldSummary && newSummary) {
+                    oldSummary.textContent = Math.max(0, Number(oldSummary.textContent) - 1);
+                    newSummary.textContent = Number(newSummary.textContent) + 1;
+                }
+                const filteredOut = board.dataset.filterStatus !== '' && board.dataset.filterStatus !== newStatus;
+                announce(filteredOut ? 'Görev güncellendi. Seçili durum filtresine artık uymadığı için sayfa yenilendiğinde görünmeyecek.' : (result.message || 'Görev durumu güncellendi.'));
+            } catch (error) {
+                oldParent.insertBefore(card, oldNext && oldNext.parentElement === oldParent ? oldNext : null);
+                select.value = oldStatus;
+                if (error.name === 'AbortError') failureMessage = 'İstek zaman aşımına uğradı. Durumu kontrol etmek için sayfayı yenileyin.';
+                announce(failureMessage, true);
+            } finally {
+                window.clearTimeout(timeout);
+                delete card.dataset.pending;
+                card.removeAttribute('aria-busy');
+                card.draggable = true;
+                select.disabled = false;
+                updateCounts();
+                if (restoreFocus && !board.hidden && document.activeElement === document.body) select.focus();
+            }
+        };
+        board.querySelectorAll('[data-board-status]').forEach(select => select.addEventListener('change', () => moveTask(select.closest('[data-board-card]'), select.value)));
+        let dragged = null;
+        board.querySelectorAll('[data-board-card]').forEach(card => {
+            card.addEventListener('dragstart', event => {
+                if (card.dataset.pending === 'true' || event.target.closest('select, a')) { event.preventDefault(); return; }
+                dragged = card;
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', card.dataset.taskId);
+                card.classList.add('is-dragging');
+            });
+            card.addEventListener('dragend', () => { dragged = null; card.classList.remove('is-dragging'); columns.forEach(column => column.classList.remove('is-drop-target')); });
+        });
+        columns.forEach(column => {
+            column.addEventListener('dragover', event => { if (dragged) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; column.classList.add('is-drop-target'); } });
+            column.addEventListener('dragleave', event => { if (!column.contains(event.relatedTarget)) column.classList.remove('is-drop-target'); });
+            column.addEventListener('drop', event => { if (!dragged) return; event.preventDefault(); column.classList.remove('is-drop-target'); moveTask(dragged, column.dataset.boardColumn); });
+        });
+    }
     document.querySelector('[data-validation-alert]')?.focus();
 })();

@@ -327,3 +327,42 @@ html[data-theme="dark"] .pen-app .pen-field .input-validation-error { background
 html[data-theme="dark"] .pen-app .pen-delete-dialog::backdrop { background: rgb(0 0 0 / .65); }
 html[data-theme="dark"] .pen-app .pen-skip:focus { background: #26354a; color: white; }
 @media (max-width: 760px) { html[data-theme="dark"] .pen-app .pen-task-panel { background: transparent; } }
+
+/* Liste ve pano aynı filtrelenmiş görev sayfasını paylaşır. */
+.pen-view-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 22px; border-top: 1px solid var(--pen-line); }
+.pen-view-toolbar p { margin: 0; color: var(--pen-text); font-size: 11px; }
+.pen-view-switch { display: inline-flex; flex-shrink: 0; padding: 3px; border: 1px solid var(--pen-line); border-radius: 8px; background: #f6f7fb; }
+.pen-view-switch button { border: 0; border-radius: 5px; padding: 7px 13px; color: var(--pen-text); background: transparent; cursor: pointer; }
+.pen-view-switch button[aria-pressed="true"] { color: var(--pen-purple); background: white; box-shadow: 0 1px 4px #17233d1a; font-weight: 600; }
+.pen-board-wrap { padding: 0 22px 20px; }
+.pen-board-message:empty { display: none; }
+.pen-board-message { margin: 0 0 12px; padding: 10px 12px; border-radius: 7px; background: #eef0ff; color: #3530a8; }
+.pen-board-message[data-error="true"] { background: #fff0f2; color: #a53649; }
+.pen-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 14px; }
+.pen-board-column { min-width: 0; padding: 14px; border: 1px solid var(--pen-line); border-radius: 10px; background: #f8f9fc; }
+.pen-board-column h2 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 14px; font-size: 13px; font-weight: 600; }
+.pen-board-count { min-width: 24px; padding: 2px 7px; border-radius: 5px; text-align: center; color: var(--pen-text); background: #e9ecf4; font-size: 11px; }
+.pen-board-cards { display: grid; gap: 10px; min-height: 12px; }
+.pen-board-column.is-drop-target { border-color: #8078ee; background: #f0efff; }
+.pen-board-card { display: grid; gap: 10px; min-width: 0; padding: 14px; border: 1px solid var(--pen-line); border-radius: 9px; background: white; box-shadow: 0 2px 8px #17233d0a; }
+.pen-board-card[draggable="true"] { cursor: grab; }
+.pen-board-card.is-dragging { opacity: .55; }
+.pen-board-card[aria-busy="true"] { opacity: .65; }
+.pen-board-card-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.pen-board-title { color: #26324c; font-weight: 600; overflow-wrap: anywhere; }
+.pen-board-title:hover { text-decoration: underline; }
+.pen-board-due { margin: 0; color: var(--pen-text); font-size: 11px; }
+.pen-board-card label { color: var(--pen-text); font-size: 11px; }
+.pen-board-card select { min-width: 0; width: 100%; padding: 8px 30px 8px 10px; border: 1px solid var(--pen-line); border-radius: 6px; background-color: #fff; color: #34405c; }
+.pen-board-empty { margin: 8px 0 0; color: var(--pen-text); font-size: 11px; }
+html[data-theme="dark"] .pen-app :is(.pen-view-switch,.pen-board-column) { background-color: #26354a; }
+html[data-theme="dark"] .pen-app :is(.pen-board-card,.pen-board-card select) { background-color: #1d293b; color: #edf2fa; border-color: var(--pen-line); }
+html[data-theme="dark"] .pen-app :is(.pen-board-title,.pen-view-switch button[aria-pressed="true"]) { color: #edf2fa; }
+html[data-theme="dark"] .pen-app :is(.pen-board-count,.pen-view-switch button[aria-pressed="true"],.pen-board-column.is-drop-target) { background-color: #454173; color: #fff; }
+html[data-theme="dark"] .pen-app .pen-board-message { background: #393765; color: #e0ddff; }
+html[data-theme="dark"] .pen-app .pen-board-message[data-error="true"] { background: #572b38; color: #ffd0d7; }
+@media (max-width: 760px) {
+    .pen-view-toolbar { align-items: flex-start; flex-direction: column; padding: 8px 0 16px; border: 0; gap: 8px; }
+    .pen-board-wrap { padding: 0; }
+    .pen-board { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+}
