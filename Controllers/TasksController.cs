@@ -21,20 +21,39 @@ public class TasksController : Controller
         _project = project;
     }
 
-    public IActionResult Index([Bind(Prefix = "Filter")] TaskFilterViewModel filter)
+    public IActionResult Index([Bind(Prefix = "Filter")] TaskFilterViewModel filter, string? view = null)
     {
         //ViewModel, View'ın yani kullanıcının gördüğü ekranın
         //ihtiyaç duyduğu verileri taşımak için kullanılan sınıftır.
         
         //TaskListViewModel → Görevleri listelemek için.
-        var page = ModelState.IsValid
-            ? _taskService.SayfaliGorevleriGetir(filter.Search, filter.Status, filter.Priority, filter.Sort, filter.Page, filter.PageSize)
-            : new TaskPage();
-        if (ModelState.IsValid) filter.Page = page.Page;
+        var isBoard = string.Equals(view, "board", StringComparison.OrdinalIgnoreCase);
+        if (isBoard)
+        {
+            foreach (var field in new[] { nameof(filter.Status), nameof(filter.Page), nameof(filter.PageSize), nameof(filter.Sort) })
+                ModelState.Remove($"Filter.{field}");
+        }
+
+        var page = new TaskPage();
+        List<TaskItem> tasks = [];
+        if (ModelState.IsValid)
+        {
+            if (isBoard)
+            {
+                tasks = _taskService.TumGorevleriGetir(filter.Search, null, filter.Priority);
+            }
+            else
+            {
+                page = _taskService.SayfaliGorevleriGetir(filter.Search, filter.Status, filter.Priority, filter.Sort, filter.Page, filter.PageSize);
+                tasks = page.Items;
+                filter.Page = page.Page;
+            }
+        }
         return View(new TaskListViewModel
         {
             ProjectName = _project.Name,
-            Tasks = page.Items,
+            Tasks = tasks,
+            ViewMode = isBoard ? "board" : "list",
             Pagination = page,
             Filter = filter,
             Summary = _taskService.OzetGetir(),

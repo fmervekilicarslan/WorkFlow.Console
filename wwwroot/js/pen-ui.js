@@ -91,19 +91,27 @@
     const board = document.querySelector('[data-board-view]');
     const viewControls = document.querySelector('[data-view-controls]');
     const list = document.querySelector('[data-list-view]');
-    if (board && viewControls && list) {
-        const viewButtons = [...viewControls.querySelectorAll('[data-task-view]')];
-        let savedView = 'list';
-        try { savedView = localStorage.getItem('workflow-task-view') === 'board' ? 'board' : 'list'; } catch { /* Depolama isteğe bağlıdır. */ }
-        const showView = view => {
-            list.hidden = view !== 'list';
-            board.hidden = view !== 'board';
-            viewButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.taskView === view)));
-            try { localStorage.setItem('workflow-task-view', view); } catch { /* Sayfa açıkken seçim kullanılabilir. */ }
-        };
-        viewButtons.forEach(button => button.addEventListener('click', () => showView(button.dataset.taskView)));
-        showView(savedView);
-        viewControls.hidden = false;
+    const currentView = document.querySelector('[data-current-view]')?.dataset.currentView;
+    if (viewControls && currentView) {
+        const url = new URL(window.location.href);
+        let savedView = null;
+        try { savedView = localStorage.getItem('workflow-task-view'); } catch { /* Depolama isteğe bağlıdır. */ }
+        if (!url.searchParams.has('view') && savedView === 'board' && currentView === 'list') {
+            url.searchParams.set('view', 'board');
+            window.location.replace(url.href);
+        } else {
+            try { localStorage.setItem('workflow-task-view', currentView); } catch { /* Depolama isteğe bağlıdır. */ }
+        }
+        viewControls.querySelectorAll('[data-task-view]').forEach(link => link.addEventListener('click', () => {
+            try { localStorage.setItem('workflow-task-view', link.dataset.taskView); } catch { /* Bağlantı yine de çalışır. */ }
+        }));
+        window.addEventListener('pageshow', event => {
+            if (event.persisted) {
+                try { localStorage.setItem('workflow-task-view', currentView); } catch { /* Depolama isteğe bağlıdır. */ }
+            }
+        });
+    }
+    if (board) {
 
         const message = board.querySelector('[data-board-message]');
         const token = board.querySelector('[name="__RequestVerificationToken"]').value;
@@ -148,7 +156,7 @@
                     throw new Error('update failed');
                 }
                 card.dataset.status = newStatus;
-                const row = [...list.querySelectorAll('[data-list-task]')].find(item => item.dataset.listTask === card.dataset.taskId);
+                const row = list ? [...list.querySelectorAll('[data-list-task]')].find(item => item.dataset.listTask === card.dataset.taskId) : null;
                 const listSelect = row?.querySelector('select[name="yeniDurum"]');
                 if (listSelect) {
                     const statusNames = ['Todo', 'InProgress', 'Completed'];
@@ -162,8 +170,7 @@
                     oldSummary.textContent = Math.max(0, Number(oldSummary.textContent) - 1);
                     newSummary.textContent = Number(newSummary.textContent) + 1;
                 }
-                const filteredOut = board.dataset.filterStatus !== '' && board.dataset.filterStatus !== newStatus;
-                announce(filteredOut ? 'Görev güncellendi. Seçili durum filtresine artık uymadığı için sayfa yenilendiğinde görünmeyecek.' : (result.message || 'Görev durumu güncellendi.'));
+                announce(result.message || 'Görev durumu güncellendi.');
             } catch (error) {
                 oldParent.insertBefore(card, oldNext && oldNext.parentElement === oldParent ? oldNext : null);
                 select.value = oldStatus;

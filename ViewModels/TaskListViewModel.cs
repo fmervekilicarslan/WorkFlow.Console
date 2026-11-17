@@ -6,6 +6,7 @@ public class TaskListViewModel
 {
     public required string ProjectName { get; init; }
     public required List<TaskItem> Tasks { get; init; }
+    public string ViewMode { get; init; } = "list";
     public TaskFilterViewModel Filter { get; init; } = new();
     public TaskSummary Summary { get; init; } = new();
     public DateOnly Today { get; init; }

@@ -35,6 +35,13 @@ function OpenPage($path) {
     Cdp 'Page.navigate' @{url=($BaseUrl + $path)} | Out-Null
     Start-Sleep -Milliseconds 150
     Eval 'new Promise(resolve=>{function wait(){if(document.readyState==="complete"&&document.querySelector("main"))document.fonts.ready.then(()=>resolve(true));else setTimeout(wait,30)}wait()})' | Out-Null
+    Eval ('window.qaTaskId="' + $TaskId + '";window.qaCard=()=>document.querySelector(`[data-board-card][data-task-id="${window.qaTaskId}"]`);') | Out-Null
+}
+function ClickView($view) {
+    Eval ('document.querySelector("[data-task-view=' + $view + ']").click()') | Out-Null
+    Start-Sleep -Milliseconds 250
+    Eval 'new Promise(resolve=>{function wait(){if(document.readyState==="complete"&&document.querySelector("main"))resolve(true);else setTimeout(wait,30)}wait()})' | Out-Null
+    Eval ('window.qaTaskId="' + $TaskId + '";window.qaCard=()=>document.querySelector(`[data-board-card][data-task-id="${window.qaTaskId}"]`);') | Out-Null
 }
 function Check($ok, $label) {
     if (-not $ok) { throw ('FAIL: ' + $label) }
@@ -50,11 +57,14 @@ try {
     $page=$targets | Where-Object type -eq 'page' | Select-Object -First 1
     $socket.ConnectAsync([Uri]$page.webSocketDebuggerUrl,[Threading.CancellationToken]::None).GetAwaiter().GetResult() | Out-Null
     Cdp 'Page.enable' @{} | Out-Null
-    OpenPage '/Tasks?Filter.PageSize=50'
-    Eval ('window.qaTaskId="' + $TaskId + '";window.qaCard=()=>document.querySelector(`[data-board-card][data-task-id="${window.qaTaskId}"]`);') | Out-Null
-    Check (Eval '(()=>{const a=[...document.querySelectorAll("[data-list-task]")].map(e=>e.dataset.listTask).sort();const b=[...document.querySelectorAll("[data-board-card]")].map(e=>e.dataset.taskId).sort();return a.length>0&&JSON.stringify(a)===JSON.stringify(b)})()') 'list and board render the same task IDs'
-    Eval 'document.querySelector("[data-task-view=board]").click()' | Out-Null
-    Check (Eval '!document.querySelector("[data-board-view]").hidden&&document.querySelector("[data-task-view=board]").getAttribute("aria-pressed")==="true"') 'board selector changes view and accessible state'
+    OpenPage '/Tasks?view=list&Filter.PageSize=50'
+    $listIds = Eval 'JSON.stringify([...document.querySelectorAll("[data-list-task]")].map(e=>e.dataset.listTask).sort())'
+    ClickView 'board'
+    $boardIds = Eval 'JSON.stringify([...document.querySelectorAll("[data-board-card]")].map(e=>e.dataset.taskId).sort())'
+    Check ($listIds -eq $boardIds -and $boardIds.Length -gt 10) 'separate list and board pages render the same complete task IDs'
+    Check (Eval '!!document.querySelector("[data-board-view]")&&document.querySelector("[data-task-view=board]").getAttribute("aria-current")==="page"&&new URL(location.href).searchParams.get("view")==="board"') 'board link changes URL view and accessible state'
+    Check (Eval 'document.querySelectorAll("[data-board-card]").length>10&&!document.querySelector("[data-list-view]")') 'board renders all matched tasks and excludes inactive list DOM'
+    Check (Eval '!document.querySelector(".pen-pagination,.pen-status-tabs,select[name=\"Filter.PageSize\"],select[name=\"Filter.Sort\"]")') 'board omits list-only controls'
     foreach($width in @(1440,390,320)) {
         Cdp 'Emulation.setDeviceMetricsOverride' @{width=$width;height=900;deviceScaleFactor=1;mobile=$false} | Out-Null
         foreach($theme in @('light','dark')) {
@@ -68,7 +78,7 @@ try {
     Check (Eval 'qaCard().dataset.status==="0"&&qaCard().closest("[data-board-column]").dataset.boardColumn==="0"&&!qaCard().querySelector("select").disabled') 'select alternative persists a successful status update'
     Check (Eval 'document.activeElement===qaCard().querySelector("select")') 'select retains keyboard focus after moving card'
     Check (Eval '[...document.querySelectorAll("[data-board-column]")].every(c=>Number(c.querySelector("[data-board-count]").textContent)===c.querySelectorAll("[data-board-card]").length)') 'column counters match moved cards'
-    Check (Eval 'document.querySelector(`[data-list-task="${qaTaskId}"] select`).value==="Todo"') 'hidden list status stays in sync'
+    Check (Eval '(async()=>{const html=await (await fetch("/Tasks?view=list&Filter.PageSize=50")).text();const doc=new DOMParser().parseFromString(html,"text/html");return doc.querySelector(`[data-list-task="${qaTaskId}"] select`).value==="Todo"})()') 'separately requested list reflects saved board status'
     # Synthetic HTML drag/drop exercises the actual registered handlers without writing outside the owned test task.
     Eval '(()=>{const c=qaCard(),target=document.querySelector("[data-board-column=\"1\"]"),data=new DataTransfer();c.dispatchEvent(new DragEvent("dragstart",{bubbles:true,dataTransfer:data}));target.dispatchEvent(new DragEvent("dragover",{bubbles:true,cancelable:true,dataTransfer:data}));target.dispatchEvent(new DragEvent("drop",{bubbles:true,cancelable:true,dataTransfer:data}));c.dispatchEvent(new DragEvent("dragend",{bubbles:true,dataTransfer:data}))})()' | Out-Null
     WaitUpdate
@@ -84,24 +94,32 @@ try {
     OpenPage '/Tasks/Create'
     Check (Eval 'document.documentElement.dataset.theme==="dark"&&!!document.querySelector("form[novalidate]")') 'theme and existing create form survive navigation'
     OpenPage '/Tasks?Filter.PageSize=50'
-    Check (Eval '!document.querySelector("[data-board-view]").hidden&&localStorage.getItem("workflow-task-view")==="board"') 'board preference survives navigation'
+    Check (Eval '!!document.querySelector("[data-board-view]")&&localStorage.getItem("workflow-task-view")==="board"') 'board preference survives navigation without explicit view'
     Check (Eval ('document.querySelector(`[data-board-card][data-task-id="' + $TaskId + '"]`).dataset.status==="1"')) 'reload confirms saved status and failed updates did not persist'
     OpenPage ("/Tasks/Edit/$TaskId")
     Check (Eval '!!document.querySelector("form[novalidate]")&&!!document.querySelector("#Title")') 'existing edit form renders'
     OpenPage ("/Tasks/Details/$TaskId")
     Check (Eval '!!document.querySelector("main h1")&&document.documentElement.scrollWidth<=innerWidth') 'existing details layout fits mobile'
     OpenPage '/Tasks?Filter.Search=nonexistent-kanban-qa-value'
-    Check (Eval '!document.querySelector("[data-board-view]").hidden&&document.querySelectorAll("[data-board-column]").length===3&&[...document.querySelectorAll("[data-board-count]")].every(e=>e.textContent==="0")') 'empty board keeps three zero-count columns'
-    OpenPage '/Tasks?Filter.Status=1&Filter.PageSize=50'
-    Eval ('window.qaTaskId="' + $TaskId + '";window.qaCard=()=>document.querySelector(`[data-board-card][data-task-id="${window.qaTaskId}"]`);const s=qaCard().querySelector("select");s.value="2";s.dispatchEvent(new Event("change",{bubbles:true}));') | Out-Null
+    Check (Eval '!!document.querySelector("[data-board-view]")&&document.querySelectorAll("[data-board-column]").length===3&&[...document.querySelectorAll("[data-board-count]")].every(e=>e.textContent==="0")') 'empty board keeps three zero-count columns'
+    OpenPage '/Tasks?view=board&Filter.Status=1&Filter.Page=2&Filter.PageSize=5'
+    Eval '(()=>{const s=qaCard().querySelector("select");s.value="2";s.dispatchEvent(new Event("change",{bubbles:true}))})()' | Out-Null
     WaitUpdate
-    Check (Eval 'qaCard().dataset.status==="2"&&document.querySelector("[data-board-message]").textContent.includes("filtre")') 'filtered move explains why card remains until refresh'
-    OpenPage '/Tasks?Filter.Status=1&Filter.PageSize=50'
-    Check (Eval ('!document.querySelector(`[data-board-card][data-task-id="' + $TaskId + '"]`)')) 'refresh reapplies active status filter'
+    Check (Eval 'qaCard().dataset.status==="2"&&document.querySelector("[data-board-message]").dataset.error==="false"') 'legacy list filter does not prevent successful board move'
+    OpenPage '/Tasks?view=board&Filter.Status=1&Filter.Page=2&Filter.PageSize=5'
+    Check (Eval 'qaCard().dataset.status==="2"&&document.querySelectorAll("[data-board-card]").length>10') 'board refresh retains all statuses despite legacy status and page'
     OpenPage '/Tasks?Filter.PageSize=50'
-    Eval 'document.querySelector("[data-task-view=list]").click()' | Out-Null
+    ClickView 'list'
     OpenPage '/Tasks?Filter.PageSize=50'
-    Check (Eval 'document.querySelector("[data-board-view]").hidden&&document.querySelector("[data-task-view=list]").getAttribute("aria-pressed")==="true"') 'list preference also persists'
+    Check (Eval '!document.querySelector("[data-board-view]")&&document.querySelector("[data-task-view=list]").getAttribute("aria-current")==="page"') 'list preference also persists'
+    Eval 'localStorage.setItem("workflow-task-view","board")' | Out-Null
+    OpenPage '/Tasks?view=list&Filter.PageSize=50'
+    Check (Eval '!!document.querySelector("[data-list-view]")&&!document.querySelector("[data-board-view]")&&localStorage.getItem("workflow-task-view")==="list"') 'explicit list URL overrides stored board preference'
+    OpenPage '/Tasks?view=list&Filter.Status=0&Filter.Page=2&Filter.PageSize=5'
+    ClickView 'board'
+    Check (Eval 'document.querySelectorAll("[data-board-card]").length>10&&!document.querySelector(".pen-status-tabs")') 'filtered second list page transitions to complete unfiltered board'
+    ClickView 'list'
+    Check (Eval '(()=>{const q=new URL(location.href).searchParams;return q.get("view")==="list"&&["0","Todo"].includes(q.get("Filter.Status"))&&q.get("Filter.Page")==="2"&&q.get("Filter.PageSize")==="5"&&!document.querySelector("[data-board-view]")&&document.querySelectorAll("[data-list-task]").length>0&&document.querySelectorAll("[data-list-task]").length<=5})()') 'return link preserves selected status, second page and page size'
     Write-Output "$script:passed browser checks passed. Owned test task only; browser profile retained in temporary directory."
 } finally {
     $socket.Dispose()

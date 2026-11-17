@@ -6,11 +6,20 @@
     ViewData["TaskCount"] = Model.Summary.Total;
     string StatusText(Status status) => status switch { Status.Todo => "Yapılacak", Status.InProgress => "Devam ediyor", _ => "Tamamlandı" };
     string PriorityText(Priority priority) => priority == Priority.Normal ? "Medium" : priority.ToString();
-    string? ListUrl(int page, Status? status) => Url.Action("Index", new Microsoft.AspNetCore.Routing.RouteValueDictionary
+    bool isBoard = Model.ViewMode == "board";
+    string? ViewUrl(string view, int page, Status? status) => Url.Action("Index", new Microsoft.AspNetCore.Routing.RouteValueDictionary
     {
+        ["view"] = view,
         ["Filter.Search"] = Model.Filter.Search, ["Filter.Status"] = status,
         ["Filter.Priority"] = Model.Filter.Priority, ["Filter.Sort"] = Model.Filter.Sort,
         ["Filter.PageSize"] = Model.Filter.PageSize, ["Filter.Page"] = page
+    });
+    string? ListUrl(int page, Status? status) => ViewUrl("list", page, status);
+    string? ClearUrl() => Url.Action("Index", new Microsoft.AspNetCore.Routing.RouteValueDictionary
+    {
+        ["view"] = Model.ViewMode, ["Filter.Status"] = isBoard ? Model.Filter.Status : null,
+        ["Filter.Sort"] = isBoard ? Model.Filter.Sort : null, ["Filter.Page"] = isBoard ? Model.Filter.Page : null,
+        ["Filter.PageSize"] = isBoard ? Model.Filter.PageSize : null
     });
 }
 <div class="pen-mobile-context">Görevler <span>@Model.Summary.Total</span></div>
@@ -25,41 +34,51 @@
     <div><span class="pen-metric-icon progress"><partial name="_PenIcon" model='"progress"' /></span><div><strong data-summary-status="1">@Model.Summary.InProgress</strong><span>Devam ediyor</span></div></div>
     <div><span class="pen-metric-icon completed"><partial name="_PenIcon" model='"check-circle"' /></span><div><strong data-summary-status="2">@Model.Summary.Completed</strong><span>Tamamlandı</span></div></div>
 </section>
-<section class="pen-task-panel" aria-label="Görev listesi">
+<section class="pen-task-panel" aria-label="Görevler" data-current-view="@Model.ViewMode">
     <div class="pen-table-toolbar">
+        @if (!isBoard) {
         <nav class="pen-status-tabs" aria-label="Duruma göre filtrele">
             <a href="@ListUrl(1,null)" class="@(Model.Filter.Status is null ? "active" : null)" aria-current="@(Model.Filter.Status is null ? "true" : null)">Tüm görevler</a>
             @foreach (var status in Enum.GetValues<Status>())
             { <a href="@ListUrl(1,status)" class="@(Model.Filter.Status == status ? "active" : null)" aria-current="@(Model.Filter.Status == status ? "true" : null)">@StatusText(status)</a> }
         </nav>
+        }
         <form method="get" asp-action="Index" class="pen-search">
+            <input type="hidden" name="view" value="@Model.ViewMode" />
             <input type="hidden" name="Filter.Status" value="@Model.Filter.Status" />
             <input type="hidden" name="Filter.Priority" value="@Model.Filter.Priority" />
             <input type="hidden" name="Filter.Sort" value="@Model.Filter.Sort" />
             <input type="hidden" name="Filter.PageSize" value="@Model.Filter.PageSize" />
+            @if (isBoard) { <input type="hidden" name="Filter.Page" value="@Model.Filter.Page" /> }
             <label class="pen-sr-only" for="task-search">Başlık veya açıklamada ara</label>
             <input id="task-search" name="Filter.Search" value="@Model.Filter.Search" type="search" maxlength="200" placeholder="Görevlerde ara..." />
             <button type="submit" class="pen-icon-button" aria-label="Görevlerde ara"><partial name="_PenIcon" model='"search"' /></button>
         </form>
     </div>
     <details class="pen-extra-filters" open="@(!ViewData.ModelState.IsValid || Model.Filter.Priority.HasValue || Model.Filter.Sort != TaskSort.Newest || Model.Filter.PageSize != 10)">
-        <summary>Öncelik, sıralama ve sayfalama</summary>
+        <summary>@(isBoard ? "Öncelik filtresi" : "Öncelik, sıralama ve sayfalama")</summary>
         <form method="get" asp-action="Index">
+            <input type="hidden" name="view" value="@Model.ViewMode" />
             <input type="hidden" name="Filter.Search" value="@Model.Filter.Search" /><input type="hidden" name="Filter.Status" value="@Model.Filter.Status" />
             <div asp-validation-summary="All" class="pen-validation" role="alert"></div>
             <div><label asp-for="Filter.Priority">Öncelik</label><select asp-for="Filter.Priority"><option value="">Tüm öncelikler</option>@foreach(var priority in Enum.GetValues<Priority>()) { <option value="@((int)priority)">@PriorityText(priority)</option> }</select></div>
+            @if (isBoard) {
+            <input type="hidden" name="Filter.Sort" value="@Model.Filter.Sort" /><input type="hidden" name="Filter.PageSize" value="@Model.Filter.PageSize" /><input type="hidden" name="Filter.Page" value="@Model.Filter.Page" />
+            } else {
             <div><label asp-for="Filter.Sort">Sıralama</label><select asp-for="Filter.Sort" asp-items="Html.GetEnumSelectList<TaskSort>()"></select></div>
             <div><label asp-for="Filter.PageSize">Sayfa başına</label><select asp-for="Filter.PageSize"><option value="10">10 görev</option><option value="20">20 görev</option><option value="50">50 görev</option></select></div>
-            <button class="pen-button pen-primary" type="submit">Uygula</button><a asp-action="Index" class="pen-button pen-secondary">Temizle</a>
+            }
+            <button class="pen-button pen-primary" type="submit">Uygula</button><a href="@ClearUrl()" class="pen-button pen-secondary">Temizle</a>
         </form>
     </details>
-    <div class="pen-view-toolbar" data-view-controls hidden>
-        <div class="pen-view-switch" role="group" aria-label="Görev görünümü">
-            <button type="button" data-task-view="list" aria-pressed="true">Liste</button>
-            <button type="button" data-task-view="board" aria-pressed="false">Pano</button>
+    <div class="pen-view-toolbar" data-view-controls>
+        <div class="pen-view-switch" aria-label="Görev görünümü">
+            <a href="@ViewUrl("list", Model.Filter.Page, Model.Filter.Status)" data-task-view="list" aria-current="@(!isBoard ? "page" : null)">Liste</a>
+            <a href="@ViewUrl("board", Model.Filter.Page, Model.Filter.Status)" data-task-view="board" aria-current="@(isBoard ? "page" : null)">Pano</a>
         </div>
-        <p>Görünüm, seçili filtreleri ve geçerli sayfadaki görevleri gösterir.</p>
+        <p>@(isBoard ? "Pano, arama ve öncelikle eşleşen tüm görevleri gösterir." : "Liste, seçili filtrelere uyan görevlerin geçerli sayfasını gösterir.")</p>
     </div>
+    @if (!isBoard) {
     <div data-list-view>
     @if (Model.Tasks.Count == 0)
     {
@@ -115,7 +134,10 @@
         </table>
     }
     </div>
-    <div class="pen-board-wrap" data-board-view data-update-url="@Url.Action("UpdateBoardStatus")" data-filter-status="@(Model.Filter.Status.HasValue ? ((int)Model.Filter.Status.Value).ToString() : "")" hidden>
+    } else {
+    <div class="pen-board-wrap" data-board-view data-update-url="@Url.Action("UpdateBoardStatus")">
+        @if (Model.Tasks.Count == 0) { <p class="pen-board-description">@(Model.Summary.Total == 0 ? "Henüz görev yok. Yeni bir görev oluşturarak başlayın." : "Arama ve öncelik filtresine uyan görev yok.")</p> }
+        <noscript><p class="pen-board-description">Pano üzerinde durum değiştirmek için JavaScript gereklidir. <a href="@ViewUrl("list", Model.Filter.Page, Model.Filter.Status)">Listeye dön</a>.</p></noscript>
         <form data-board-token method="post">@Html.AntiForgeryToken()</form>
         <p class="pen-board-message" data-board-message role="status" aria-live="polite"></p>
         <div class="pen-board" aria-label="Görev panosu">
@@ -146,6 +168,10 @@
             }
         </div>
     </div>
+    }
+    @if (isBoard) {
+    <footer class="pen-table-footer"><span>@Model.Tasks.Count görev gösteriliyor</span></footer>
+    } else {
     <footer class="pen-table-footer"><span>@Model.Pagination.TotalCount sonuç · @Model.Tasks.Count görev gösteriliyor</span><span>@Html.DisplayFor(m => m.Filter.Sort)</span></footer>
     @if (Model.Pagination.TotalPages > 1)
     {
@@ -155,6 +181,7 @@
             { if(page == Model.Pagination.Page) { <span aria-current="page">@(page)</span> } else { <a href="@ListUrl(page,Model.Filter.Status)" aria-label="Sayfa @(page)">@(page)</a> } }
             @if(Model.Pagination.Page < Model.Pagination.TotalPages) { <a href="@ListUrl(Model.Pagination.Page + 1,Model.Filter.Status)" rel="next">Sonraki</a> }
         </nav>
+    }
     }
 </section>
 <noscript><p class="pen-no-script">Silme onay penceresi ve mobil menü için JavaScript gereklidir. <a asp-action="Create">Yeni görev oluştur</a>.</p></noscript>

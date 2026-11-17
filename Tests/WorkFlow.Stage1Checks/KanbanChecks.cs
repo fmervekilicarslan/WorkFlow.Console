@@ -52,10 +52,11 @@ internal static class KanbanChecks
                 && saved.CreatedDate == before.CreatedDate && saved.Title == before.Title
                 && saved.Description == before.Description && saved.Priority == before.Priority && saved.DueDate == before.DueDate,
                 "fresh PostgreSQL read persists only status: " + status);
-            var refreshed = await client.GetStringAsync("/Tasks?Filter.Search=" + Uri.EscapeDataString(saved.Title));
+            var refreshed = await client.GetStringAsync("/Tasks?view=board&Filter.Search=" + Uri.EscapeDataString(saved.Title));
+            var refreshedList = await client.GetStringAsync("/Tasks?view=list&Filter.Search=" + Uri.EscapeDataString(saved.Title));
             var card = Regex.Match(refreshed, $"<article\\b[^>]*data-task-id=\"{taskId}\"[^>]*data-status=\"{(int)status}\"[^>]*>");
             var column = Regex.Match(refreshed, $"<section\\b[^>]*data-board-column=\"{(int)status}\"[^>]*>(.*?)</section>", RegexOptions.Singleline);
-            var row = Regex.Match(refreshed, $"<tr\\b[^>]*data-list-task=\"{taskId}\"[^>]*>(.*?)</tr>", RegexOptions.Singleline);
+            var row = Regex.Match(refreshedList, $"<tr\\b[^>]*data-list-task=\"{taskId}\"[^>]*>(.*?)</tr>", RegexOptions.Singleline);
             Check(card.Success && column.Value.Contains(card.Value) && row.Success
                 && Regex.IsMatch(row.Value, $"<option[^>]*(?:selected=\"selected\"[^>]*value=\"{status}\"|value=\"{status}\"[^>]*selected=\"selected\")"),
                 "reload retains updated card column and selected list status: " + status);
@@ -91,10 +92,12 @@ internal static class KanbanChecks
         }
         using (var get = await client.GetAsync("/Tasks/UpdateBoardStatus"))
             Check(get.StatusCode == HttpStatusCode.MethodNotAllowed, "GET cannot mutate board status");
-        var filtered = await client.GetStringAsync("/Tasks?Filter.Status=0&Filter.PageSize=5&Filter.Page=2");
+        var filtered = await client.GetStringAsync("/Tasks?view=list&Filter.PageSize=50");
+        var fullBoard = await client.GetStringAsync("/Tasks?view=board&Filter.Status=0&Filter.PageSize=5&Filter.Page=2");
         var listIds = Regex.Matches(filtered, "data-list-task=\"([^\"]+)\"").Select(m => m.Groups[1].Value).Order().ToArray();
-        var boardIds = Regex.Matches(filtered, "data-board-card[^>]*data-task-id=\"([^\"]+)\"").Select(m => m.Groups[1].Value).Order().ToArray();
-        Check(listIds.Length > 0 && listIds.Length <= 5 && listIds.SequenceEqual(boardIds), "filtered paginated list and board contain identical task IDs");
+        var boardIds = Regex.Matches(fullBoard, "data-board-card[^>]*data-task-id=\"([^\"]+)\"").Select(m => m.Groups[1].Value).Order().ToArray();
+        Check(listIds.Length > 10 && listIds.SequenceEqual(boardIds), "complete list and unpaginated board contain identical task IDs across separate responses");
+        count += await BoardQueryChecks.Run(client, taskId, open);
 
         foreach (var (failure, expected) in new (Exception Failure, int Status)[]
         {

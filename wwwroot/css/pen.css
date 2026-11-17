@@ -332,8 +332,8 @@ html[data-theme="dark"] .pen-app .pen-skip:focus { background: #26354a; color: w
 .pen-view-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 22px; border-top: 1px solid var(--pen-line); }
 .pen-view-toolbar p { margin: 0; color: var(--pen-text); font-size: 11px; }
 .pen-view-switch { display: inline-flex; flex-shrink: 0; padding: 3px; border: 1px solid var(--pen-line); border-radius: 8px; background: #f6f7fb; }
-.pen-view-switch button { border: 0; border-radius: 5px; padding: 7px 13px; color: var(--pen-text); background: transparent; cursor: pointer; }
-.pen-view-switch button[aria-pressed="true"] { color: var(--pen-purple); background: white; box-shadow: 0 1px 4px #17233d1a; font-weight: 600; }
+.pen-view-switch a { border: 0; border-radius: 5px; padding: 7px 13px; color: var(--pen-text); background: transparent; cursor: pointer; }
+.pen-view-switch a[aria-current="page"] { color: var(--pen-purple); background: white; box-shadow: 0 1px 4px #17233d1a; font-weight: 600; }
 .pen-board-wrap { padding: 0 22px 20px; }
 .pen-board-message:empty { display: none; }
 .pen-board-message { margin: 0 0 12px; padding: 10px 12px; border-radius: 7px; background: #eef0ff; color: #3530a8; }
@@ -357,8 +357,8 @@ html[data-theme="dark"] .pen-app .pen-skip:focus { background: #26354a; color: w
 .pen-board-empty { margin: 8px 0 0; color: var(--pen-text); font-size: 11px; }
 html[data-theme="dark"] .pen-app :is(.pen-view-switch,.pen-board-column) { background-color: #26354a; }
 html[data-theme="dark"] .pen-app :is(.pen-board-card,.pen-board-card select) { background-color: #1d293b; color: #edf2fa; border-color: var(--pen-line); }
-html[data-theme="dark"] .pen-app :is(.pen-board-title,.pen-view-switch button[aria-pressed="true"]) { color: #edf2fa; }
-html[data-theme="dark"] .pen-app :is(.pen-board-count,.pen-view-switch button[aria-pressed="true"],.pen-board-column.is-drop-target) { background-color: #454173; color: #fff; }
+html[data-theme="dark"] .pen-app :is(.pen-board-title,.pen-view-switch a[aria-current="page"]) { color: #edf2fa; }
+html[data-theme="dark"] .pen-app :is(.pen-board-count,.pen-view-switch a[aria-current="page"],.pen-board-column.is-drop-target) { background-color: #454173; color: #fff; }
 html[data-theme="dark"] .pen-app .pen-board-message { background: #393765; color: #e0ddff; }
 html[data-theme="dark"] .pen-app .pen-board-message[data-error="true"] { background: #572b38; color: #ffd0d7; }
 @media (max-width: 760px) {
