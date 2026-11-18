@@ -91,7 +91,12 @@ try {
     WaitPage
     Check (Eval ('location.pathname.endsWith("/Tasks/Details/' + $TaskId + '")')) 'month label opens existing details route'
     OpenPage ('/Calendar?view=month' + $query)
-    Check (Eval '(()=>{const i=document.querySelector("#calendar-date");return i.type==="text"&&i.value==="29.02.2028"&&i.labels.length===1&&!!document.getElementById(i.getAttribute("aria-describedby"))})()') 'Turkish date field has stable formatted value and accessible guidance'
+    Check (Eval '(()=>{const i=document.querySelector("#calendar-date");return i.type==="text"&&i.value==="29.02.2028"&&i.labels.length===1&&i.getAttribute("aria-label")==="Tarih, GG.AA.YYYY bi\u00e7iminde"&&i.placeholder==="GG.AA.YYYY"})()') 'Turkish date field has stable formatted value and accessible format name'
+    Check (Eval '(()=>{const i=document.querySelector("#calendar-date"),heading=document.querySelector("[data-calendar-view=month] > .pen-calendar-heading");return !!heading.querySelector("h2")&&!heading.querySelector("p")&&!document.querySelector("#calendar-date-format")&&!i.hasAttribute("aria-describedby")&&!i.parentElement.querySelector(".pen-calendar-current-date")})()') 'month heading and date field omit removed explanatory text'
+    Eval 'const dateInput=document.querySelector("#calendar-date");dateInput.value="";dateInput.focus()' | Out-Null
+    Check (Eval 'document.querySelector("#calendar-date").matches(":placeholder-shown")&&document.querySelector("#calendar-date").placeholder==="GG.AA.YYYY"') 'empty date field displays only the format placeholder'
+    Cdp 'Input.insertText' @{text='01.03.2028'} | Out-Null
+    Check (Eval 'document.querySelector("#calendar-date").value==="01.03.2028"&&!document.querySelector("#calendar-date").matches(":placeholder-shown")') 'typing a date hides the format placeholder'
     Eval 'document.querySelector("#calendar-date").value="01.03.2028";document.querySelector(".pen-calendar-filters").requestSubmit()' | Out-Null
     WaitPage
     Check (Eval 'document.querySelector("#calendar-date").value==="01.03.2028"&&document.querySelector("[data-calendar-view]").dataset.calendarView==="month"') 'Turkish date form navigates without native browser date formatting'
