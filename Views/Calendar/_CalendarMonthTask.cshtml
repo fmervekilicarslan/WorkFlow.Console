@@ -1,0 +1,11 @@
+@model WorkFlow.Mvc.Models.TaskItem
+@{
+    var status = Model.Status == Status.Todo ? "Yapılacak" : Model.Status == Status.InProgress ? "Devam ediyor" : "Tamamlandı";
+    var statusSymbol = Model.Status == Status.Todo ? "○" : Model.Status == Status.InProgress ? "◐" : "✓";
+    var priority = Model.Priority switch { Priority.Critical => "Kritik", Priority.High => "Yüksek", Priority.Normal => "Normal", _ => "Düşük" };
+    var prioritySymbol = Model.Priority switch { Priority.Critical => "!!!", Priority.High => "!!", Priority.Normal => "!", _ => "↓" };
+    var accessibleName = $"{Model.Code} {Model.Title}, {status}, {priority} öncelik";
+}
+<a class="pen-calendar-token priority-@Model.Priority.ToString().ToLowerInvariant()" asp-controller="Tasks" asp-action="Details" asp-route-id="@Model.Id" aria-label="@accessibleName" title="@accessibleName">
+    <span class="pen-calendar-token-symbol" aria-hidden="true">@statusSymbol @prioritySymbol</span><span class="pen-calendar-token-text">@Model.Code @Model.Title</span><span class="pen-calendar-token-full" aria-hidden="true">@accessibleName</span>
+</a>

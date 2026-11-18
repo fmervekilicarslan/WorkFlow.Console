@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$BaseUrl, [Parameter(Mandatory)][string]$Search, [Parameter(Mandatory)][Guid]$TaskId)
+param([Parameter(Mandatory)][string]$BaseUrl, [Parameter(Mandatory)][string]$Search, [Parameter(Mandatory)][Guid]$TaskId, [switch]$FocusedLongTitle)
 $ErrorActionPreference = 'Stop'
 if ($BaseUrl -notmatch '^http://127\.0\.0\.1:\d+$' -or $Search -notmatch '^CALENDAR-[a-f0-9]{32}$') { throw 'An isolated local test server and calendar fixture marker are required.' }
 $probe = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
@@ -46,6 +46,14 @@ try {
     $socket.ConnectAsync([Uri]$page.webSocketDebuggerUrl,[Threading.CancellationToken]::None).GetAwaiter().GetResult() | Out-Null
     Cdp 'Page.enable' @{} | Out-Null
     $query = '&date=2028-02-29&Filter.Search=' + $Search
+    if ($FocusedLongTitle) {
+        Cdp 'Emulation.setDeviceMetricsOverride' @{width=320;height=900;deviceScaleFactor=1;mobile=$false} | Out-Null
+        OpenPage ('/Calendar?view=month' + $query)
+        Eval 'document.querySelector("[data-calendar-day=\"2028-02-29\"] details summary").click()' | Out-Null
+        Write-Output ('DIAGNOSTIC: ' + (Eval 'JSON.stringify((()=>{const t=[...document.querySelectorAll(".pen-calendar-token-text")].find(e=>e.textContent.includes("busy-long-"));return {found:!!t,whiteSpace:t&&getComputedStyle(t).whiteSpace,ellipsis:t&&getComputedStyle(t).textOverflow,scrollWidth:t&&t.scrollWidth,clientWidth:t&&t.clientWidth,actualCodes:t&&[...t.closest("a").getAttribute("aria-label").slice(-90)].map(c=>c.codePointAt(0)),expectedCodes:[..."\u011f"].map(c=>c.codePointAt(0)),unicodeExpectation:t&&t.closest("a").getAttribute("aria-label").includes("\u011f".repeat(20))}})())'))
+        Check (Eval '(()=>{const t=[...document.querySelectorAll(".pen-calendar-token-text")].find(e=>e.textContent.includes("busy-long-"));return !!t&&getComputedStyle(t).whiteSpace==="nowrap"&&getComputedStyle(t).textOverflow==="ellipsis"&&t.scrollWidth>t.clientWidth&&t.closest("a").getAttribute("aria-label").includes("\u011f".repeat(20))})()') 'long title truncates visually and retains full accessible name'
+        return
+    }
     foreach($view in @('month','week','day')) {
         OpenPage ('/Calendar?view=' + $view + $query)
         $expected = @{month=35;week=7;day=1}[$view]
@@ -54,15 +62,39 @@ try {
             Cdp 'Emulation.setDeviceMetricsOverride' @{width=$width;height=900;deviceScaleFactor=1;mobile=$false} | Out-Null
             foreach($theme in @('light','dark')) {
                 Eval ('document.querySelector("[data-theme-choice=' + $theme + ']").click()') | Out-Null
-                Check (Eval 'document.documentElement.scrollWidth<=innerWidth&&[...document.querySelectorAll(".pen-calendar-task")].filter(e=>e.getBoundingClientRect().width>0).every(e=>{const r=e.getBoundingClientRect();return e.scrollWidth<=e.clientWidth+1&&parseFloat(getComputedStyle(e.querySelector("a")).fontSize)>=11&&r.right<=innerWidth&&r.left>=0})') "$view fits readable cards at $width px $theme"
+                Check (Eval 'document.documentElement.scrollWidth<=innerWidth&&[...document.querySelectorAll(".pen-calendar-task,.pen-calendar-token")].filter(e=>e.getBoundingClientRect().width>0).every(e=>{const r=e.getBoundingClientRect();return e.scrollWidth<=e.clientWidth+1&&parseFloat(getComputedStyle(e.matches("a")?e:e.querySelector("a")).fontSize)>=11&&r.right<=innerWidth&&r.left>=0})') "$view fits readable cards at $width px $theme"
                 Check (Eval ('document.documentElement.dataset.theme==="' + $theme + '"')) "$view applies $theme theme at $width px"
+                if ($view -eq 'month') {
+                    Check (Eval '(()=>{const d=document.querySelector("[data-calendar-day=\"2028-02-29\"]");return d.querySelectorAll(":scope > .pen-calendar-token").length===3&&[...d.querySelectorAll(":scope > .pen-calendar-token")].every(e=>e.getBoundingClientRect().height<=30)&&d.getBoundingClientRect().height<=240})()') "month limits busy day to three compact labels at $width px $theme"
+                }
             }
         }
     }
     OpenPage ('/Calendar?view=month' + $query)
-    Check (Eval '(()=>{const d=document.querySelector("[data-calendar-day=\"2028-02-29\"] details");return !!d&&!d.open&&d.querySelectorAll(".pen-calendar-task").length===7&&d.querySelector("summary").textContent.startsWith("+7")})()') 'busy day starts with seven additional tasks collapsed'
+    Check (Eval '(()=>{const d=document.querySelector("[data-calendar-day=\"2028-02-29\"] details");return !!d&&!d.open&&d.querySelectorAll(".pen-calendar-token").length===7&&d.querySelector("summary").textContent.startsWith("+7")})()') 'busy day starts with seven additional tasks collapsed'
     Eval 'document.querySelector("[data-calendar-day=\"2028-02-29\"] details summary").click()' | Out-Null
-    Check (Eval '(()=>{const d=document.querySelector("[data-calendar-day=\"2028-02-29\"]");return d.querySelector("details").open&&[...d.querySelectorAll(".pen-calendar-task")].every(e=>e.getBoundingClientRect().width>0)})()') 'native disclosure exposes every busy-day task'
+    Check (Eval '(()=>{const d=document.querySelector("[data-calendar-day=\"2028-02-29\"]");return d.querySelector("details").open&&[...d.querySelectorAll(".pen-calendar-token")].every(e=>e.getBoundingClientRect().width>0)})()') 'native disclosure exposes every busy-day task'
+    Check (Eval '(()=>{const l=document.querySelector(".pen-calendar-more-list");return getComputedStyle(l).overflowY==="auto"&&l.clientHeight<=144&&l.scrollHeight>l.clientHeight})()') 'expanded overflow uses bounded scroll area'
+    Check (Eval '(()=>{const t=[...document.querySelectorAll(".pen-calendar-token-text")].find(e=>e.textContent.includes("busy-long-"));return !!t&&getComputedStyle(t).whiteSpace==="nowrap"&&getComputedStyle(t).textOverflow==="ellipsis"&&t.scrollWidth>t.clientWidth&&t.closest("a").getAttribute("aria-label").includes("\u011f".repeat(20))})()') 'long title truncates visually and retains full accessible name'
+    Check (Eval '[...document.querySelectorAll(".pen-calendar-token")].every(e=>e.querySelector(".pen-calendar-token-symbol").textContent.trim()&&e.getAttribute("aria-label").includes("\u00f6ncelik"))') 'status and priority include symbols and accessible text'
+    Check (Eval '[...document.querySelectorAll("[data-calendar-day]")].filter(e=>!e.querySelector(".pen-calendar-token")).every(e=>!e.querySelector(".pen-calendar-no-tasks")&&!e.textContent.includes("G\u00f6rev yok"))') 'empty month days omit repeated no-task text'
+    Eval 'document.querySelector("[data-calendar-day=\"2028-02-29\"] details summary").click();document.querySelector("[data-calendar-day=\"2028-02-29\"] > .pen-calendar-token").focus()' | Out-Null
+    Cdp 'Input.dispatchKeyEvent' @{type='keyDown';key='Tab';code='Tab';windowsVirtualKeyCode=9} | Out-Null
+    Cdp 'Input.dispatchKeyEvent' @{type='keyUp';key='Tab';code='Tab';windowsVirtualKeyCode=9} | Out-Null
+    Check (Eval '(()=>{const a=document.activeElement;const full=a.querySelector(".pen-calendar-token-full");return a.matches(".pen-calendar-token")&&a.matches(":focus-visible")&&!!full&&getComputedStyle(full).display!=="none"&&full.textContent===a.getAttribute("aria-label")})()') 'keyboard Tab reveals complete task explanation'
+    Eval ('document.querySelector(`.pen-calendar-token[href="/Tasks/Details/' + $TaskId + '"]`).click()') | Out-Null
+    WaitPage
+    Check (Eval ('location.pathname.endsWith("/Tasks/Details/' + $TaskId + '")')) 'month label opens existing details route'
+    OpenPage ('/Calendar?view=month' + $query)
+    Check (Eval '(()=>{const i=document.querySelector("#calendar-date");return i.type==="text"&&i.value==="29.02.2028"&&i.labels.length===1&&!!document.getElementById(i.getAttribute("aria-describedby"))})()') 'Turkish date field has stable formatted value and accessible guidance'
+    Eval 'document.querySelector("#calendar-date").value="01.03.2028";document.querySelector(".pen-calendar-filters").requestSubmit()' | Out-Null
+    WaitPage
+    Check (Eval 'document.querySelector("#calendar-date").value==="01.03.2028"&&document.querySelector("[data-calendar-view]").dataset.calendarView==="month"') 'Turkish date form navigates without native browser date formatting'
+    OpenPage ('/Calendar?view=month' + $query + '&Filter.Status=1&Filter.Priority=3')
+    Eval 'document.querySelector("[data-calendar-day=\"2028-02-29\"] h3 a").click()' | Out-Null
+    WaitPage
+    Check (Eval ('(()=>{const q=new URL(location.href).searchParams;return q.get("view")==="day"&&q.get("date")==="2028-02-29"&&q.get("Filter.Search")==="' + $Search + '"&&["1","InProgress"].includes(q.get("Filter.Status"))&&["3","Critical"].includes(q.get("Filter.Priority"))&&document.querySelectorAll("[data-calendar-day]").length===1})()')) 'day heading opens selected day with all filters retained'
+    OpenPage ('/Calendar?view=month' + $query)
     Eval 'document.querySelector(".pen-calendar-undated .pen-pagination [rel=next]").click()' | Out-Null
     WaitPage
     Check (Eval 'document.querySelectorAll(".pen-calendar-undated .pen-calendar-task").length===2&&document.querySelectorAll("[data-calendar-day]").length===35&&new URL(location.href).searchParams.get("Filter.UndatedPage")==="2"') 'undated next page leaves month cells intact'

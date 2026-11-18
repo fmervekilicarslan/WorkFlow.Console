@@ -16,6 +16,7 @@ if (args.Length > 0)
         switch (args[0])
         {
             case "--stage2": await Stage2Checks.Run(); break;
+            case "--calendar-focused": await CalendarFocusedChecks.Run(); break;
             case "--database": await DatabaseChecks.Run(); break;
             case "--prepare-test-database": await TestDatabase.Prepare(); break;
             default: throw new InvalidOperationException("Unknown test mode; refusing to run.");

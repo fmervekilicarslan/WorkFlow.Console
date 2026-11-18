@@ -3,7 +3,7 @@
 @{
     var today = (DateOnly)ViewData["CalendarToday"]!;
     var status = Model.Status == Status.Todo ? "Yapılacak" : Model.Status == Status.InProgress ? "Devam ediyor" : "Tamamlandı";
-    var priority = Model.Priority == Priority.Normal ? "Medium" : Model.Priority.ToString();
+    var priority = Model.Priority switch { Priority.Critical => "Kritik", Priority.High => "Yüksek", Priority.Normal => "Normal", _ => "Düşük" };
 }
 <article class="pen-calendar-task">
     <span class="pen-task-code">@Model.Code</span>

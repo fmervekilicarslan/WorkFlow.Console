@@ -23,10 +23,10 @@ public sealed class CalendarController(ITaskService taskService, Project project
             mode = "month";
         }
 
-        if (date is not null && (!DateOnly.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture,
+        if (date is not null && (!DateOnly.TryParseExact(date, ["yyyy-MM-dd", "dd.MM.yyyy"], CultureInfo.InvariantCulture,
                 DateTimeStyles.None, out selectedDate) || selectedDate < CalendarDates.MinDate || selectedDate > CalendarDates.MaxDate))
         {
-            ModelState.AddModelError(nameof(date), "1900 ile 9998 yılları arasında geçerli bir tarih seçin.");
+            ModelState.AddModelError(nameof(date), "1900 ile 9998 yılları arasında geçerli bir tarih seçin. Tarihi GG.AA.YYYY biçiminde girin.");
             selectedDate = today;
         }
 

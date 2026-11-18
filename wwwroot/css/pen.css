@@ -371,12 +371,13 @@ html[data-theme="dark"] .pen-app .pen-board-message[data-error="true"] { backgro
 .pen-calendar-panel { min-width: 0; padding: 22px; border: 1px solid var(--pen-line); border-radius: 12px; background: white; }
 .pen-calendar-toolbar, .pen-calendar-navigation { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .pen-calendar-toolbar { justify-content: space-between; gap: 16px; }
-.pen-calendar-toolbar .pen-button { padding: 8px 12px; }
-.pen-calendar-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding: 20px 0; margin: 4px 0 16px; border-bottom: 1px solid var(--pen-line); }
-.pen-calendar-field { display: grid; gap: 5px; flex: 1 1 140px; min-width: 0; }
+.pen-calendar-toolbar .pen-button { padding: 6px 10px; }
+.pen-calendar-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding: 12px 0; margin: 4px 0 12px; border-bottom: 1px solid var(--pen-line); }
+.pen-calendar-field { display: grid; gap: 3px; flex: 1 1 135px; min-width: 0; }
 .pen-calendar-field label { font-size: 11px; color: var(--pen-text); }
 .pen-calendar-field input, .pen-calendar-field select { width: 100%; min-width: 0; height: 38px; padding: 8px 10px; border: 1px solid var(--pen-line); border-radius: 6px; background-color: white; color: #34405c; }
-.pen-calendar-filters .pen-button { padding: 9px 14px; }
+.pen-calendar-current-date { color: var(--pen-text); font-size: 10px; }
+.pen-calendar-filters .pen-button { padding: 8px 12px; }
 .pen-calendar-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
 .pen-calendar-heading h2 { margin: 0; font-size: 18px; font-weight: 600; }
 .pen-calendar-heading p, .pen-calendar-empty, .pen-calendar-no-tasks { margin: 0; color: var(--pen-text); font-size: 12px; }
@@ -386,6 +387,15 @@ html[data-theme="dark"] .pen-app .pen-board-message[data-error="true"] { backgro
 .pen-calendar-day { min-width: 0; padding: 10px; border: 1px solid var(--pen-line); border-radius: 8px; background: #f8f9fc; }
 .pen-calendar-day.is-outside { background: #f2f3f8; }
 .pen-calendar-day.is-today { border-color: #8078ee; }
+.pen-calendar-grid.is-month .pen-calendar-day { padding: 8px; }
+.pen-calendar-grid.is-month .pen-calendar-day h3 { margin-bottom: 5px; }
+.pen-calendar-token { position: relative; display: flex; align-items: center; gap: 4px; min-width: 0; margin-top: 4px; padding: 4px 6px; border-radius: 5px; font-size: 11px; line-height: 16px; }
+.pen-calendar-token-symbol { flex: 0 0 auto; font-weight: 700; }
+.pen-calendar-token-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pen-calendar-token:hover .pen-calendar-token-text { text-decoration: underline; }
+.pen-calendar-token-full { display: none; }
+.pen-calendar-token:focus-visible { flex-wrap: wrap; outline: 2px solid var(--pen-purple); outline-offset: 2px; }
+.pen-calendar-token:focus-visible .pen-calendar-token-full { display: block; flex: 0 0 100%; overflow-wrap: anywhere; white-space: normal; }
 .pen-calendar-day h3 { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 5px; margin: 0 0 10px; font-size: 11px; font-weight: 600; }
 .pen-calendar-day h3 a { color: var(--pen-ink); }
 .pen-calendar-day h3 a:hover, .pen-calendar-task a:hover { text-decoration: underline; }
@@ -394,7 +404,8 @@ html[data-theme="dark"] .pen-app .pen-board-message[data-error="true"] { backgro
 .pen-calendar-task a { color: #26324c; font-weight: 600; }
 .pen-calendar-task-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--pen-text); font-size: 10px; }
 .pen-calendar-date { color: var(--pen-text); font-size: 10px; }
-.pen-calendar-more summary { margin-top: 10px; color: var(--pen-purple); cursor: pointer; font-weight: 600; }
+.pen-calendar-more summary { margin-top: 6px; color: var(--pen-purple); cursor: pointer; font-size: 11px; font-weight: 600; }
+.pen-calendar-more-list { max-height: 144px; overflow-y: auto; }
 .pen-calendar-undated { margin-top: 28px; padding-top: 8px; border-top: 1px solid var(--pen-line); }
 .pen-calendar-undated-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 10px; }
 .pen-calendar-undated .pen-pagination { padding: 16px 0 0; }

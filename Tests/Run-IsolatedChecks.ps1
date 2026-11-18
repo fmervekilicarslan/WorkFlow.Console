@@ -1,7 +1,8 @@
 # Windows / Docker Desktop runner. No User Secrets, live writes or automatic database deletion.
 [CmdletBinding()]
-param([switch]$ExistingOnly)
+param([switch]$ExistingOnly, [switch]$CalendarFocused)
 $ErrorActionPreference = 'Stop'
+if ($CalendarFocused -and -not $ExistingOnly) { throw 'Focused checks require ExistingOnly; provisioning is forbidden.' }
 Set-StrictMode -Version Latest
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $projectRoot
@@ -76,7 +77,7 @@ COMMIT;
     if ($liveAccess -ne 't') { throw 'Test role has access to live objects; stopping without modifying live permissions.' }
     Write-Output 'PASS: Test role has no live table, sequence or schema/database creation privileges.'
     [Environment]::SetEnvironmentVariable('WORKFLOW_TEST_CONNECTION', $connectionValue, 'Process')
-    $modes = if ($ExistingOnly) { @('--database', '--stage2') } else { @('--prepare-test-database', '--database', '--stage2') }
+    $modes = if ($CalendarFocused) { @('--calendar-focused') } elseif ($ExistingOnly) { @('--database', '--stage2') } else { @('--prepare-test-database', '--database', '--stage2') }
     foreach ($mode in $modes) {
         & dotnet $testDll $mode
         if ($LASTEXITCODE -ne 0) { throw "Isolated test mode failed: $mode" }

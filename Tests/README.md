@@ -59,3 +59,24 @@ Takvim geliştirmesi sonrası aynı komutlarla **445/445 kontrol başarılı**: 
 `CalendarBrowserChecks.ps1` gerçek Chrome CDP ile gün/hafta/ay görünümlerini iki temada 320/390/768/1440 px genişliklerde denetler. Görünür kartlarda iç/yatay taşma ve başlık okunabilirliği; native +N ayrıntısının açılması; tarihsiz sayfalama; filtreli görünüm bağlantıları; görünüm/tema kalıcılığı; açık görünümün kayıtlı tercihe önceliği; Details ve Bugün gezinmesi; boş sonuçlar ve etkin Takvim menüsü kontrol edilir. Takvim tarayıcı akışı yalnız GET istekleri yapar. Fiziksel klavye/dokunmatik cihaz ve ekran görüntüsüne dayanan görsel onay bu koşuda yapılmadı; dar ekran kontrolleri masaüstü viewport emülasyonudur.
 
 Takvim GET/Chrome kontrollerinden önce ve sonra tüm görevlerin snapshot'ı aynı kaldı. Yalnız kendi takvim fixture kayıtları temizlenince önceki bütün kayıtlar tekrar aynıydı; dış runner da gerçek `workflow_db` görev/migration/sequence/sahiplik/izin fingerprint'inin değişmediğini doğruladı. Test veritabanı/rol, gerçek kayıtlar ve normal uygulama bağlantısı korundu.
+
+## Takvim V1.1 kontrolleri
+
+Birleştirme öncesi tam koşu **471/471 başarılıdır**: 68 bağlantısız + 16 PostgreSQL + 387 Stage2. Mevcut 445 kontrolün kapsamı korunarak 9 HTTP ve 17 Chrome kontrolü eklendi. Stage2 içindeki takvim Chrome grubu artık 79, mevcut Kanban Chrome grubu 36 kontroldür. Release uygulama ve test derlemesi sıfır hata ve uyarıyla geçti. Tarayıcı kontrolleri kapalıyken toplam 356 kontroldür.
+
+Yeni HTTP kontrolleri, İstanbul/UTC gece yarısı sınırındaki görevlerin gün/hafta/ay görünümlerinin tam doğru gün hücresinde bulunduğunu ve `29.02.2028` girişinin ISO tarih ile aynı günü seçtiğini doğrular. Geçersiz artık gün, ay günü, belirsiz tarih biçimi ve yıl sınırları için tam Türkçe hata mesajı ile girilen değerin korunması denetlenir. Doğrudan HTTP istekleri tarih ayrıştırmasının JavaScript'e bağımlı olmadığını da kanıtlar.
+
+Chrome kontrolleri iki temada 1440/768/390/320 px genişlikleri, yoğun günde ilk üç kompakt etiketi ve hücre yüksekliğini, +7 açılmasını ve sınırlı kaydırma alanını, 120 karakter başlığın ellipsis ile kısalmasını ve tam erişilebilir adını, renk dışındaki durum/öncelik simgelerini, boş günlerde tekrarlanan metin bulunmamasını, ay etiketinden Details'a geçişi, biçimli tarih formunu ve gün başlığından tüm filtrelerle Gün görünümüne geçişi doğrular. CDP `Input.dispatchKeyEvent` ile Tab gönderilerek odak açıklamasının görünmesi ayrıca kontrol edilir. Fiziksel klavye/dokunmatik cihaz ve ekran görüntüsüyle görsel onay kapsam dışındadır.
+
+Uzun başlık kontrolünün tek başına yeniden üretimi:
+
+```powershell
+dotnet build Tests/WorkFlow.Stage1Checks/WorkFlow.Stage1Checks.csproj -c Release --no-restore
+.\Tests\Run-IsolatedChecks.ps1 -ExistingOnly -CalendarFocused
+```
+
+Odaklı mod yalnız mevcut izole veritabanında on geçici görev, kendi HTTP sunucusu ve gerçek Razor/Chrome sayfası kullanır; aynı uzun başlık assertion'ını çalıştırır. Geçici görevler temizlenir ve test veritabanı snapshot'ı karşılaştırılır; dış runner canlı fingerprint'i denetler. `-CalendarFocused`, `-ExistingOnly` olmadan reddedilir. Bu odaklı kontrol 471 toplamına ayrıca eklenmez.
+
+İlk uzun başlık hatası, Windows PowerShell 5'in BOM içermeyen UTF-8 betiğindeki Türkçe sabiti yanlış okumasından kaynaklandı: gerçek DOM `ğ` kodu 287, yanlış okunan test beklentisi 196/376 idi. JavaScript Unicode kaçışları aynı sıkı assertion'ı kodlamadan bağımsız hâle getirdi; ürün HTML/CSS değişikliği gerekmedi. Odaklı kontrol düzeltme sonrası geçti; ardından tam koşu tekrar başarıyla tamamlandı.
+
+Bu koşuda migration veya kaynak oluşturma yapılmadı. Canlı `workflow_db` fingerprint'i ve tüm özgün test görevleri değişmedi; test veritabanı/rol korundu. Tanı ve tam koşu logları Git dışındaki `.local-checkpoints/calendar-v11-focused-*.log` ve `calendar-v11-premerge-*.log` dosyalarındadır.

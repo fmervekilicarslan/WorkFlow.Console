@@ -7,7 +7,7 @@
     var tr = CultureInfo.GetCultureInfo("tr-TR");
     string Iso(DateOnly date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
     string StatusText(Status status) => status switch { Status.Todo => "Yapılacak", Status.InProgress => "Devam ediyor", _ => "Tamamlandı" };
-    string PriorityText(Priority priority) => priority == Priority.Normal ? "Medium" : priority.ToString();
+    string PriorityText(Priority priority) => priority switch { Priority.Critical => "Kritik", Priority.High => "Yüksek", Priority.Normal => "Normal", _ => "Düşük" };
     string? CalendarUrl(string view, DateOnly date, int undatedPage = 1) => Url.Action("Index", "Calendar", new Microsoft.AspNetCore.Routing.RouteValueDictionary {
         ["view"] = view, ["date"] = Iso(date), ["Filter.Search"] = Model.Filter.Search,
         ["Filter.Status"] = Model.Filter.Status, ["Filter.Priority"] = Model.Filter.Priority,
@@ -31,9 +31,9 @@
             { <a href="@CalendarUrl(option.Value, Model.SelectedDate, Model.Filter.UndatedPage)" data-calendar-choice="@option.Value" aria-current="@(Model.ViewMode == option.Value ? "page" : null)">@option.Label</a> }
         </nav>
     </div>
-    <form method="get" asp-controller="Calendar" asp-action="Index" class="pen-calendar-filters">
+    <form method="get" asp-controller="Calendar" asp-action="Index" class="pen-calendar-filters" novalidate>
         <input type="hidden" name="view" value="@Model.ViewMode" />
-        <div class="pen-calendar-field"><label for="calendar-date">Tarih</label><input id="calendar-date" type="date" name="date" value="@Iso(Model.SelectedDate)" min="1900-01-01" max="9998-12-31" /></div>
+        <div class="pen-calendar-field"><label for="calendar-date">Tarih</label><input id="calendar-date" type="text" name="date" value="@(ViewData.ModelState["date"]?.Errors.Count > 0 ? ViewData.ModelState["date"]?.AttemptedValue : Model.SelectedDate.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture))" inputmode="numeric" placeholder="GG.AA.YYYY" pattern="[0-9]{2}\.[0-9]{2}\.[0-9]{4}" required aria-describedby="calendar-date-format" /><span id="calendar-date-format" class="pen-calendar-current-date">GG.AA.YYYY (ör. 17.11.2026)</span></div>
         <div class="pen-calendar-field"><label asp-for="Filter.Search">Ara</label><input asp-for="Filter.Search" type="search" maxlength="200" placeholder="Görevlerde ara..." /></div>
         <div class="pen-calendar-field"><label asp-for="Filter.Status">Durum</label><select asp-for="Filter.Status"><option value="">Tüm durumlar</option>@foreach (var status in Enum.GetValues<Status>()) { <option value="@((int)status)">@StatusText(status)</option> }</select></div>
         <div class="pen-calendar-field"><label asp-for="Filter.Priority">Öncelik</label><select asp-for="Filter.Priority"><option value="">Tüm öncelikler</option>@foreach (var priority in Enum.GetValues<Priority>()) { <option value="@((int)priority)">@PriorityText(priority)</option> }</select></div>
@@ -43,7 +43,7 @@
     </form>
     <div class="pen-calendar-heading"><h2>@heading</h2><p>@(Model.ViewMode == "month" ? "Ay görünümü · haftalar pazartesi başlar" : Model.ViewMode == "week" ? "Hafta görünümü · pazartesiden pazara" : "Gün görünümü")</p></div>
     @if (!Model.Days.Any(day => day.Tasks.Count > 0)) { <p class="pen-calendar-empty">Bu dönemde filtrelere uyan tarihli görev yok.</p> }
-    <div class="pen-calendar-grid @(Model.ViewMode == "day" ? "is-day" : "")" data-calendar-grid>
+    <div class="pen-calendar-grid @(Model.ViewMode == "day" ? "is-day" : "") @(Model.ViewMode == "month" ? "is-month" : "")" data-calendar-grid>
         @foreach (var day in Model.Days)
         {
             var supported = day.Date.Year >= 1900 && day.Date.Year <= 9998;
@@ -53,14 +53,18 @@
                     else { <span>@day.Date.ToString("d MMM ddd", tr)</span> }
                     @if (day.Date == Model.Today) { <span class="pen-calendar-today">Bugün</span> }
                 </h3>
-                @foreach (var task in Model.ViewMode == "month" ? day.Tasks.Take(3) : day.Tasks) { <partial name="_CalendarTask" model="task" /> }
+                @foreach (var task in Model.ViewMode == "month" ? day.Tasks.Take(3) : day.Tasks)
+                {
+                    if (Model.ViewMode == "month") { <partial name="_CalendarMonthTask" model="task" /> }
+                    else { <partial name="_CalendarTask" model="task" /> }
+                }
                 @if (Model.ViewMode == "month" && day.Tasks.Count > 3)
                 {
                     <details class="pen-calendar-more"><summary>+@(day.Tasks.Count - 3) görev daha<span class="pen-sr-only">, @day.Date.ToString("d MMMM yyyy", tr)</span></summary>
-                        @foreach (var task in day.Tasks.Skip(3)) { <partial name="_CalendarTask" model="task" /> }
+                        <div class="pen-calendar-more-list">@foreach (var task in day.Tasks.Skip(3)) { <partial name="_CalendarMonthTask" model="task" /> }</div>
                     </details>
                 }
-                @if (day.Tasks.Count == 0) { <p class="pen-calendar-no-tasks">Görev yok</p> }
+                @if (Model.ViewMode != "month" && day.Tasks.Count == 0) { <p class="pen-calendar-no-tasks">Görev yok</p> }
             </section>
         }
     </div>

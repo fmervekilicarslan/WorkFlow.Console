@@ -44,7 +44,7 @@ internal static class CalendarChecks
         var atStart = Add("at-start", start, Status.InProgress, Priority.Critical);
         var beforeEnd = Add("before-end", end.AddTicks(-10), Status.Completed, Priority.High);
         var atEnd = Add("at-end", end);
-        for (var i = 0; i < 8; i++) Add("busy-" + i, start.AddHours(4), (Status)(i % 3), (Priority)(i % 4));
+        for (var i = 0; i < 8; i++) Add(i == 0 ? "busy-long-" + new string('ğ', 120 - marker.Length - 11) : "busy-" + i, start.AddHours(4), (Status)(i % 3), (Priority)(i % 4));
         for (var i = 0; i < 12; i++) Add("undated-" + i, null, (Status)(i % 3), (Priority)(i % 4));
         var overdue = Add("overdue", TaskDates.ToUtc(today.AddDays(-1)));
         var upcoming = Add("upcoming", TaskDates.ToUtc(today.AddDays(1)));
@@ -93,7 +93,22 @@ internal static class CalendarChecks
             var month = await Get("view=month&date=2028-02-29");
             Check(Regex.Matches(month, "data-calendar-day=").Count == 35 && month.Contains("data-calendar-day=\"2028-01-31\"") && month.Contains("data-calendar-day=\"2028-03-05\""), "leap month includes Monday-aligned padded dates");
             Check(month.Contains("class=\"pen-calendar-more\"") && month.Contains("+7 görev daha"), "busy month day exposes correct additional-task disclosure");
-            Check(day.Contains($"href=\"/Tasks/Details/{atStart.Id}\"") && day.Contains(atStart.Code) && day.Contains("Critical"), "calendar task includes permanent code, priority and details link");
+            foreach (var (view, html) in new[] { ("day", day), ("week", week), ("month", month) })
+            {
+                var cell = Regex.Match(html, "<section[^>]*data-calendar-day=\"2028-02-29\"[^>]*>.*?</section>", RegexOptions.Singleline).Value;
+                Check(cell.Contains(atStart.Id.ToString()) && cell.Contains(beforeEnd.Id.ToString())
+                    && !cell.Contains(beforeStart.Id.ToString()) && !cell.Contains(atEnd.Id.ToString()), view + " keeps midnight-boundary tasks inside their exact local date cell");
+            }
+            var turkishDate = await Get("view=day&date=29.02.2028");
+            Check(turkishDate.Contains("data-calendar-day=\"2028-02-29\"") && turkishDate.Contains(atStart.Code)
+                && turkishDate.Contains("29.02.2028"), "strict Turkish leap date selects the same Istanbul day as ISO");
+            foreach (var invalidDate in new[] { "29.02.2027", "31.04.2026", "11/12/2026", "01.01.1899", "01.01.9999" })
+            {
+                var rejected = await Get("view=day&date=" + Uri.EscapeDataString(invalidDate));
+                Check(rejected.Contains("1900 ile 9998 yılları arasında geçerli bir tarih seçin. Tarihi GG.AA.YYYY biçiminde girin.")
+                    && Regex.IsMatch(rejected, "id=\"calendar-date\"[^>]*value=\"" + Regex.Escape(invalidDate) + "\""), "invalid or ambiguous Turkish date rejected and attempted value retained: " + invalidDate);
+            }
+            Check(day.Contains($"href=\"/Tasks/Details/{atStart.Id}\"") && day.Contains(atStart.Code) && day.Contains("Kritik"), "calendar task includes permanent code, priority and details link");
             Check(day.Contains("Filter.UndatedPage=2") && day.Contains("12 görev"), "undated pagination links and total render separately");
             var undatedPage = await Get("view=day&date=2028-02-29&Filter.UndatedPage=2");
             var undatedSection = Regex.Match(undatedPage, "<section class=\"pen-calendar-undated\".*?</section>", RegexOptions.Singleline).Value;

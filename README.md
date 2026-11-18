@@ -40,11 +40,15 @@ Görünüm URL'de `view=list` veya `view=board` ile belirlenir; açık URL seçi
 
 Kartı başka sütuna sürükleyebilir veya karttaki durum alanını kullanabilirsiniz. Güncelleme CSRF korumalı MVC endpoint'i üzerinden mevcut `TaskService` ile PostgreSQL'e kaydedilir. Başarısız istekte kart önceki durumuna döner ve Türkçe hata gösterilir. Pano etkileşimleri JavaScript gerektirir; mevcut liste formuyla durum güncelleme kullanılmaya devam edilebilir. Kanban için yeni migration gerekmez.
 
-## Görev Takvimi V1
+## Görev Takvimi V1.1
 
 Menüdeki **Takvim** bağlantısı `/Calendar` sayfasını açar. Varsayılan görünüm **Ay**dır; **Gün / Hafta / Ay** bağlantıları, **Önceki / Bugün / Sonraki** kontrolleriyle tarih aralığını değiştirebilirsiniz. Görünüm tercihi tarayıcıda saklanır; URL'deki açık `view=day|week|month` seçimi önceliklidir. Arama, durum ve öncelik filtreleri tarih ve görünüm bağlamını korur.
 
 Haftalar pazartesi başlar. Ay ızgarasındaki yoğun günlerde ilk üç görev gösterilir; kalanlar klavyeyle de açılabilen **+N görev** genişletme alanındadır. Görev kartları mevcut detay sayfasına gider. Teslim tarihi olmayan görevler ayrı bölümde, sayfalı olarak gösterilir; takvim günlerine yerleştirilmez. Bugün ve tamamlanmamış gecikmiş/yaklaşan görevler vurgulanır; tamamlananlar gecikmiş sayılmaz.
+
+Ay görünümünde görevler tek satırlık kompakt etiketlerle gösterilir; uzun başlıklar üç noktayla kısalır. Tam başlık klavye odağında ve işaretçiyle erişilebilir açıklamada okunabilir. Durum ve öncelik renk yanında simgelerle belirtilir. Yoğun günlerin genişletilmiş görev alanı kaydırılabilir; boş günlerde yalnız gün başlığı gösterilir. Gün başlığı ilgili Gün görünümünü, görev etiketi Details sayfasını açar. Hafta ve Gün görünümleri ayrıntılı kartları korur.
+
+Takvim tarih alanı **GG.AA.YYYY** biçimindedir (örneğin `18.11.2026`). Native tarih alanının tarayıcı diline bağlı gösterimi yerine açıklamalı metin alanı ve sunucuda kesin biçim doğrulaması kullanılır; JavaScript kapalıyken de çalışır. Mevcut `yyyy-MM-dd` URL bağlantıları desteklenmeye devam eder. Tarih, arama, durum ve öncelik alanları dar ekranlara uyarlanan kompakt araç çubuğundadır.
 
 Tarih aralıkları İstanbul yerel günlerinden mevcut `TaskDates` dönüşümleriyle UTC'ye çevrilir. Veritabanı sorgusu başlangıç dahil, bitiş hariç aralık kullanır; kayıtların UTC teslim tarihleri doğru yerel güne gruplanır. Seçili tarihler mevcut form sınırlarıyla uyumlu olarak 1900–9998 yılları arasındadır. Takvim V1 yalnız okur; takvimden sürükleyerek teslim tarihi değiştirme içermez ve yeni migration gerektirmez.
 
