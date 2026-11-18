@@ -2,4 +2,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace WorkFlow.Mvc.Models;
 
-public sealed class ApplicationUser : IdentityUser;
+public sealed class ApplicationUser : IdentityUser
+{
+    public string? DisplayName { get; set; }
+}

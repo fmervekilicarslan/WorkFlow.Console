@@ -1,0 +1,9 @@
+@{
+    ViewData["Title"] = "Hesap Ayarları";
+    ViewData["PenPage"] = "account";
+}
+<div class="pen-heading"><div><h1>Hesap Ayarları</h1><p>Hesap ve güvenlik tercihlerini burada yönetebilirsin.</p></div></div>
+<section class="pen-form-card pen-account-card" aria-labelledby="settings-heading">
+    <header><span class="pen-form-icon"><partial name="_PenIcon" model='"progress"' /></span><div><h2 id="settings-heading">Hesap güvenliği</h2><p>Oturum açma bilgilerini yönet.</p></div></header>
+    <div class="pen-account-settings-content"><p>Parola değiştirme bu aşamada kullanıma açık değildir.</p><a class="pen-button pen-secondary" asp-action="Profile">Profil bilgilerine dön</a></div>
+</section>

@@ -466,10 +466,32 @@ html[data-theme="dark"] .pen-app .pen-calendar-token.priority-low { --calendar-p
 .pen-auth-remember { display: flex; align-items: center; gap: 8px; color: var(--pen-text); font-size: 13px; }
 .pen-auth-remember input { width: 18px; height: 18px; }
 .pen-account-actions { display: flex; align-items: center; gap: 12px; min-width: 0; font-size: 12px; }
-.pen-account-name { max-width: 180px; overflow-wrap: anywhere; color: var(--pen-text); font-size: 12px; }
+.pen-account-name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--pen-text); font-size: 12px; }
 .pen-account-link { border: 0; padding: 8px; border-radius: 6px; background: transparent; color: var(--pen-purple); font: inherit; cursor: pointer; }
 .pen-account-link:hover { text-decoration: underline; }
 .pen-mobile-header nav .pen-account-name { padding: 8px 10px; }
 .pen-mobile-header nav .pen-account-link { min-height: 44px; padding: 10px; text-align: left; }
+.pen-account-menu { position: relative; }
+.pen-account-trigger { display: flex; align-items: center; gap: 9px; min-height: 42px; padding: 4px 8px 4px 4px; border: 1px solid transparent; border-radius: 9px; color: var(--pen-ink); cursor: pointer; list-style: none; }
+.pen-account-trigger::-webkit-details-marker { display: none; }
+.pen-account-trigger::after { width: 7px; height: 7px; margin: -4px 2px 0 2px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; content: ""; transform: rotate(45deg); }
+.pen-account-menu[open] > .pen-account-trigger { background: var(--pen-bg); border-color: var(--pen-line); }
+.pen-account-avatar { display: grid; flex: 0 0 30px; width: 30px; height: 30px; place-items: center; border-radius: 50%; background: #e8e7ff; color: #4338ca; font-size: 12px; font-weight: 700; }
+.pen-account-trigger .pen-account-name { max-width: 170px; color: var(--pen-ink); }
+.pen-account-dropdown { position: absolute; top: calc(100% + 7px); right: 0; z-index: 20; display: grid; width: min(250px, calc(100vw - 24px)); padding: 8px; border: 1px solid var(--pen-line); border-radius: 10px; background: white; box-shadow: 0 12px 30px #17233d20; }
+.pen-account-dropdown > a, .pen-account-dropdown .pen-account-link { display: block; width: 100%; min-height: 40px; padding: 10px 12px; border-radius: 6px; color: var(--pen-ink); text-align: left; text-decoration: none; }
+.pen-account-dropdown > a:hover, .pen-account-dropdown .pen-account-link:hover { background: var(--pen-bg); text-decoration: none; }
+.pen-account-menu-email { overflow: hidden; padding: 8px 12px 10px; border-bottom: 1px solid var(--pen-line); color: var(--pen-text); text-overflow: ellipsis; white-space: nowrap; }
+.pen-account-dropdown form { margin: 0; }
+.pen-account-card { max-width: 640px; }
+.pen-account-settings-content { display: grid; justify-items: start; gap: 16px; padding: 24px 28px; color: var(--pen-text); }
+.pen-account-settings-content p { margin: 0; }
 html[data-theme="dark"] .pen-app .pen-account-link { color: #c3bdff; }
+html[data-theme="dark"] .pen-app .pen-account-trigger { color: #edf2fa; }
+html[data-theme="dark"] .pen-app .pen-account-avatar { background: #35315f; color: #d1ccff; }
+html[data-theme="dark"] .pen-app .pen-account-dropdown { border-color: var(--pen-line); background: #1d293b; }
+html[data-theme="dark"] .pen-app .pen-account-dropdown > a, html[data-theme="dark"] .pen-app .pen-account-dropdown .pen-account-link { color: #edf2fa; }
+html[data-theme="dark"] .pen-app .pen-account-dropdown > a:hover, html[data-theme="dark"] .pen-app .pen-account-dropdown .pen-account-link:hover { background: #27364c; }
+html[data-theme="dark"] .pen-app .pen-account-menu-email { border-color: var(--pen-line); color: #b8c2d2; }
+@media (max-width: 760px) { .pen-account-settings-content { padding: 20px; } }
 @media (max-width: 760px) { .pen-auth { max-width: 100%; } }

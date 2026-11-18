@@ -28,12 +28,30 @@ try {
     Cdp 'Page.enable' @{}|Out-Null;Cdp 'Network.enable' @{}|Out-Null
     $cookie=Cdp 'Network.setCookie' @{name='.WorkFlow.Identity';value=$env:WORKFLOW_BROWSER_COOKIE;url=$BaseUrl;secure=$true;httpOnly=$true;sameSite='Lax'}
     if(-not $cookie.success){throw 'Real authenticated test cookie was rejected.'}
+    Cdp 'Emulation.setDeviceMetricsOverride' @{width=1440;height=900;deviceScaleFactor=1;mobile=$false}|Out-Null
     OpenPage '/Tasks?view=list'
-    Check (Eval '!!document.querySelector(".pen-account-name")&&document.querySelector(".pen-account-name").textContent.trim().length>0&&[...document.querySelectorAll("form[action=\"/Account/Logout\"]")].every(f=>f.method==="post"&&!!f.querySelector("[name=__RequestVerificationToken]"))') 'authenticated layout shows account name and antiforgery POST logout'
+    Check (Eval '!!document.querySelector(".pen-account-menu summary")') 'authenticated layout renders a native avatar menu summary'
+    Check (Eval '(()=>{const s=document.querySelector(".pen-account-menu summary"),n=s?.querySelector(".pen-account-name")?.textContent.trim(),a=s?.getAttribute("aria-label");return s?.tagName==="SUMMARY"&&s.tabIndex>=0&&!!a&&!!n&&a.endsWith(n)})()') 'avatar summary has a keyboard focus target and descriptive accessible name'
+    Check (Eval '(()=>{const d=document.querySelector(".pen-account-menu");return !!d.querySelector("a[href=\"/Account/Profile\"]")&&!!d.querySelector("a[href=\"/Account/Settings\"]")})()') 'avatar menu links to profile and account settings'
+    Check (Eval '(()=>{const f=[...document.querySelectorAll(".pen-account-menu form[action=\"/Account/Logout\"]")];return f.length===1&&f[0].method==="post"&&!!f[0].querySelector("[name=__RequestVerificationToken]")})()') 'avatar menu preserves antiforgery-protected POST logout'
+    Check (Eval '(()=>{const s=document.querySelector(".pen-account-menu summary");return s?.tagName==="SUMMARY"&&s.tabIndex===0})()') 'avatar summary is a native keyboard focus target in the tab sequence'
+    Check (Eval '(()=>{const s=document.querySelector(".pen-account-menu summary");s.focus();return document.activeElement===s})()') 'avatar menu summary receives keyboard focus'
+    Check (Eval '(()=>{const s=document.querySelector(".pen-account-menu summary"),d=document.querySelector(".pen-account-menu");s.click();return d.open})()') 'native avatar control opens the menu'
+    OpenPage '/Account/Profile'
+    Check (Eval '(()=>{const f=document.querySelector(".pen-account-card form"),n=f?.querySelector("#DisplayName"),e=f?.querySelector("#profile-email");return !!f&&f.method==="post"&&!!f.querySelector("[name=__RequestVerificationToken]")&&n?.maxLength===80&&e?.readOnly===true&&e.type==="email"})()') 'profile form validates visible name and keeps email read-only'
+    foreach($width in @(1440,768,390,320)) {
+        Cdp 'Emulation.setDeviceMetricsOverride' @{width=$width;height=900;deviceScaleFactor=1;mobile=$false}|Out-Null
+        foreach($theme in @('light','dark')) {
+            Eval ('document.querySelector("[data-theme-choice='+$theme+']").click()')|Out-Null
+            Check (Eval 'document.documentElement.scrollWidth<=innerWidth&&document.querySelector(".pen-account-card").getBoundingClientRect().right<=innerWidth') "profile fits at $width px $theme"
+        }
+    }
+    OpenPage '/Account/Settings'
+    Check (Eval '!!document.querySelector("#settings-heading")&&!document.querySelector("input[type=password]")') 'settings provides a basic page without password change controls'
     Cdp 'Emulation.setDeviceMetricsOverride' @{width=390;height=900;deviceScaleFactor=1;mobile=$false}|Out-Null
     Cdp 'Emulation.setScriptExecutionDisabled' @{value=$true}|Out-Null
     OpenPage '/Tasks?view=list'
-    Check (Eval '(()=>{const f=document.querySelector(".pen-noscript-nav form[action=\"/Account/Logout\"]");return !!f&&f.getBoundingClientRect().width>0&&f.method==="post"&&!!f.querySelector("[name=__RequestVerificationToken]")})()') 'mobile no-script navigation retains a working logout form'
+    Check (Eval '(()=>{const n=document.querySelector(".pen-noscript-nav"),f=n?.querySelector("form[action=\"/Account/Logout\"]");return !!f&&f.getBoundingClientRect().width>0&&f.method==="post"&&!!f.querySelector("[name=__RequestVerificationToken]")&&!!n.querySelector("a[href=\"/Account/Profile\"]")&&!!n.querySelector("a[href=\"/Account/Settings\"]")})()') 'mobile no-script navigation retains profile, settings and CSRF logout'
     Eval 'document.querySelector(".pen-noscript-nav form[action=\"/Account/Logout\"]").requestSubmit()'|Out-Null;WaitPage
     Check (Eval 'location.pathname==="/Account/Login"&&!document.querySelector("form[action=\"/Account/Logout\"]")') 'native no-script logout POST removes the authenticated session'
     Cdp 'Emulation.setScriptExecutionDisabled' @{value=$false}|Out-Null

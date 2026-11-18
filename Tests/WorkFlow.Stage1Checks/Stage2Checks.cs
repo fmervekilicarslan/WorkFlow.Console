@@ -24,7 +24,7 @@ internal static class Stage2Checks
         using var initial = Open();
         var before = JsonSerializer.Serialize(await initial.Tasks.AsNoTracking().OrderBy(t => t.Id).ToListAsync());
         var migrations = (await initial.Database.GetAppliedMigrationsAsync()).ToArray();
-        Check(migrations.Length == 3 && migrations.SequenceEqual(initial.Database.GetMigrations()), "Existing original and Identity migrations applied, no pending schema changes");
+        Check(migrations.Length == 4 && migrations.SequenceEqual(initial.Database.GetMigrations()), "Existing original, Identity and profile migrations applied with no pending schema changes");
         var marker = "STAGE2-" + Guid.NewGuid().ToString("N");
         try
         {

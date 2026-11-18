@@ -45,12 +45,12 @@ internal static class AuthenticationChecks
         Dictionary<string, string> Credentials(string email, string password) => new() { ["Email"] = email, ["Password"] = password };
         try
         {
-            foreach (var path in new[] { "/", "/Tasks?view=list", "/Tasks?view=board", "/Tasks/Create", "/Tasks/Details/" + Guid.NewGuid(), "/Tasks/Edit/" + Guid.NewGuid(), "/Calendar?view=month", "/Calendar?view=week", "/Calendar?view=day" })
+            foreach (var path in new[] { "/", "/Tasks?view=list", "/Tasks?view=board", "/Tasks/Create", "/Tasks/Details/" + Guid.NewGuid(), "/Tasks/Edit/" + Guid.NewGuid(), "/Calendar?view=month", "/Calendar?view=week", "/Calendar?view=day", "/Account/Profile", "/Account/Settings" })
             {
                 using var response = await anonymous.Client.GetAsync(path);
                 Check(LoginChallenge(response), "anonymous protected GET requires same-origin login: " + path.Split('?')[0]);
             }
-            foreach (var action in new[] { "/Tasks/Create", "/Tasks/Edit/" + Guid.NewGuid(), "/Tasks/Delete", "/Tasks/UpdateStatus", "/Tasks/UpdateBoardStatus", "/Account/Logout" })
+            foreach (var action in new[] { "/Tasks/Create", "/Tasks/Edit/" + Guid.NewGuid(), "/Tasks/Delete", "/Tasks/UpdateStatus", "/Tasks/UpdateBoardStatus", "/Account/Logout", "/Account/Profile" })
             {
                 using var response = await Post(anonymous, action, new() { ["gorevId"] = Guid.NewGuid().ToString(), ["yeniDurum"] = "1" });
                 Check(LoginChallenge(response), "anonymous protected POST requires same-origin login: " + action.Split('/')[2]);
@@ -100,6 +100,35 @@ internal static class AuthenticationChecks
             using (var registered = await Post(b, "/Account/Register", new() { ["Email"] = emailB, ["Password"] = secret, ["ConfirmPassword"] = secret, ["ReturnUrl"] = "https://untrusted.example/" }))
                 Check(registered.StatusCode == HttpStatusCode.Redirect && registered.Headers.Location is { IsAbsoluteUri: false } && !registered.Headers.Location.ToString().Contains("untrusted"), "registration refuses an external return URL");
             using (var db = open()) ownerB = (await db.Users.AsNoTracking().SingleAsync(u => u.Email == emailB)).Id;
+            foreach (var (session, ownEmail, foreignEmail) in new[] { (a, emailA, emailB), (b, emailB, emailA) })
+            {
+                using var profile = await session.Client.GetAsync("/Account/Profile");
+                using var settings = await session.Client.GetAsync("/Account/Settings");
+                var profileHtml = await profile.Content.ReadAsStringAsync(); var settingsHtml = await settings.Content.ReadAsStringAsync();
+                Check(profile.IsSuccessStatusCode && profile.Headers.CacheControl?.NoStore == true && profileHtml.Contains(ownEmail) && !profileHtml.Contains(foreignEmail), "profile shows only the signed-in user's email and is not cached");
+                Check(settings.IsSuccessStatusCode && settings.Headers.CacheControl?.NoStore == true && settingsHtml.Contains("Parola değiştirme bu aşamada kullanıma açık değildir.") && !settingsHtml.Contains("type=\"password\""), "account settings is available without exposing a password-change form");
+            }
+            using (var missingProfileCsrf = await Post(a, "/Account/Profile", new() { ["DisplayName"] = "csrf test" }, csrf: false))
+                Check(missingProfileCsrf.StatusCode == HttpStatusCode.BadRequest, "profile update rejects a missing antiforgery token");
+            using (var updateProfile = await Post(a, "/Account/Profile", new() { ["DisplayName"] = "  QA Görünen Ad  ", ["Email"] = emailB }, tokenPath: "/Account/Profile"))
+                Check(updateProfile.StatusCode == HttpStatusCode.Redirect && updateProfile.Headers.Location?.ToString() == "/Account/Profile", "profile update accepts the display name but ignores a forged email");
+            using (var refreshedProfile = await a.Client.GetAsync("/Account/Profile"))
+            {
+                var html = WebUtility.HtmlDecode(await refreshedProfile.Content.ReadAsStringAsync());
+                Check(html.Contains("value=\"QA Görünen Ad\"") && html.Contains(emailA) && !html.Contains(emailB), "profile shows the trimmed display name and the original read-only email");
+            }
+            using (var db = open())
+            {
+                var savedA = await db.Users.AsNoTracking().SingleAsync(u => u.Id == ownerA);
+                var savedB = await db.Users.AsNoTracking().SingleAsync(u => u.Id == ownerB);
+                Check(savedA.DisplayName == "QA Görünen Ad" && savedA.Email == emailA && savedB.DisplayName is null, "profile update changes only the current user's display name");
+            }
+            using (var tooLongProfile = await Post(a, "/Account/Profile", new() { ["DisplayName"] = new string('x', 81) }, tokenPath: "/Account/Profile"))
+            {
+                var html = WebUtility.HtmlDecode(await tooLongProfile.Content.ReadAsStringAsync());
+                Check(tooLongProfile.StatusCode == HttpStatusCode.OK && html.Contains("Görünen ad en fazla 80 karakter olabilir."), "overlong display name gets a Turkish validation error");
+            }
+            using (var db = open()) Check((await db.Users.AsNoTracking().SingleAsync(u => u.Id == ownerA)).DisplayName == "QA Görünen Ad", "invalid profile update preserves the saved display name");
             foreach (var badReturn in new[] { "https://untrusted.example/", "//untrusted.example/", "/\\untrusted.example/", "\\untrusted.example/" })
             {
                 using var session = host.CreateSession(); var fields = Credentials(emailA, secret); fields["ReturnUrl"] = badReturn;

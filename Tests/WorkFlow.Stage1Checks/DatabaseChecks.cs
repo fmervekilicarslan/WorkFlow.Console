@@ -23,8 +23,8 @@ internal static class DatabaseChecks
         }
         using var baselineDb = Open();
         var applied = (await baselineDb.Database.GetAppliedMigrationsAsync()).ToArray();
-        Check(applied.Length == 3 && applied.SequenceEqual(baselineDb.Database.GetMigrations())
-            && applied.Take(2).SequenceEqual(new[] { "20261104172505_InitialPostgres", "20261109075834_AddPersistentTaskCodes" }), "Expected original two migrations plus Identity migration applied");
+        Check(applied.SequenceEqual(new[] { "20261104172505_InitialPostgres", "20261109075834_AddPersistentTaskCodes", "20261118130842_AddIdentityAndTaskOwnership", "20261118142006_AddDisplayNameToApplicationUser" })
+            && applied.SequenceEqual(baselineDb.Database.GetMigrations()), "All original, Identity and profile migrations are applied in order with no pending schema changes");
         var original = await baselineDb.Tasks.AsNoTracking().OrderBy(t => t.Id).ToListAsync();
         var originalJson = JsonSerializer.Serialize(original);
         var owned = new ConcurrentDictionary<Guid, byte>();
