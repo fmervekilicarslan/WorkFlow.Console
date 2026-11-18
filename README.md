@@ -42,6 +42,8 @@ Kartı başka sütuna sürükleyebilir veya karttaki durum alanını kullanabili
 
 Liste, Pano ve Takvim araç çubukları ortak kontrol ölçüleri ve daha sıkı boşluklar kullanır. Kanban kartları görev kodunu, başlığı, önceliği ve teslim tarihini koruyan kompakt düzendedir; başlık görev detayını açar. Durum seçicisi daha dar, klavyeyle kullanılabilir ve dokunma için en az 44 piksel yüksekliğindedir. Masaüstünde her sütunun görev alanı bağımsız kaydırılırken başlığı görünür kalır; bu alanlara Tab ile odaklanabilirsiniz. Mobilde sütunlar alt alta ve sayfayla birlikte kayar. Açık/koyu tema, filtre adresleri ve görünüm tercihleri korunur.
 
+UI Refinements V2 ile Kanban kartlarının kodu ve önceliği üstte, başlığı ortada, teslim tarihi ve küçük durum seçicisi ortak alt satırdadır. Alan daraldığında alt satır taşmadan sarılır. Native seçici ikincil görsel ağırlık taşır; dokunma alanı ve klavye odağı korunur. Sütun kaydırma çubukları açık/koyu temaya uyum sağlar.
+
 ## Görev Takvimi V1.2
 
 Menüdeki **Takvim** bağlantısı `/Calendar` sayfasını açar. Varsayılan görünüm **Ay**dır; **Gün / Hafta / Ay** bağlantıları, **Önceki / Bugün / Sonraki** kontrolleriyle tarih aralığını değiştirebilirsiniz. Görünüm tercihi tarayıcıda saklanır; URL'deki açık `view=day|week|month` seçimi önceliklidir. Arama, durum ve öncelik filtreleri tarih ve görünüm bağlamını korur.
@@ -49,6 +51,8 @@ Menüdeki **Takvim** bağlantısı `/Calendar` sayfasını açar. Varsayılan g�
 Haftalar pazartesi başlar. Ay ızgarasındaki yoğun günlerde ilk üç görev gösterilir; kalanlar klavyeyle de açılabilen **+N görev** genişletme alanındadır. Görev kartları mevcut detay sayfasına gider. Teslim tarihi olmayan görevler ayrı bölümde, sayfalı olarak gösterilir; takvim günlerine yerleştirilmez. Bugün ve tamamlanmamış gecikmiş/yaklaşan görevler vurgulanır; tamamlananlar gecikmiş sayılmaz.
 
 Ay görünümünde Pzt–Paz hafta başlıkları yedi sütunla hizalanır; gün hücrelerinde yalnız gün numarası gösterilir. Dar ekranda hafta düzeni korunur ve yalnız takvim alanı yatay kaydırılır. Önceki/sonraki ayın günleri daha soluk, bugünün numarası mor yuvarlak alanla belirtilir.
+
+V2 düzeninde ay dışı hücreler daha hafif arka plan, çerçeve ve tarih renkleriyle geri planda kalır; gün bağlantıları ve bu günlerdeki görevler kullanılmaya devam eder. Hücre boşlukları azaltılır; görevler ve erişilebilir açıklamaları soluklaştırılmaz.
 
 Görevler küçük öncelik işareti, görev kodu ve tek satırlık başlıkla gösterilir; uzun başlıklar üç noktayla kısalır. Tam başlık, öncelik ve durum klavye odağında, erişilebilir adda ve tooltip'te bulunur. Dört öncelik hafif renk tonlarıyla ayrılır; durum yalnız renkle anlatılmaz. Yoğun günlerin **+N görev** alanı kaydırılabilir; boş günlerde yalnız gün numarası gösterilir. Gün numarası ilgili Gün görünümünü, görev etiketi Details sayfasını açar. Hafta ve Gün görünümleri ayrıntılı kartları korur.
 

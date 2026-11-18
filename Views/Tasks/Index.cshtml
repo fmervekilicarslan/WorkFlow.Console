@@ -152,6 +152,7 @@
                             <article class="pen-board-card" draggable="true" data-board-card data-task-id="@task.Id" data-status="@((int)task.Status)">
                                 <div class="pen-board-card-top"><span class="pen-task-code">@task.Code</span><span class="pen-priority priority-@task.Priority.ToString().ToLowerInvariant()">@PriorityText(task.Priority)</span></div>
                                 <a class="pen-board-title" asp-action="Details" asp-route-id="@task.Id">@task.Title</a>
+                                <div class="pen-board-card-footer">
                                 <p class="pen-board-due">Son tarih: @(task.DueDate.HasValue ? TaskDates.LocalDate(task.DueDate.Value).ToString("dd.MM.yyyy") : "Belirlenmedi")
                                     @if (task.DueDate.HasValue && TaskDates.IsOverdue(task.DueDate,Status.Todo,Model.Today)) { <span class="pen-overdue" data-due-indicator hidden="@(task.Status == Status.Completed)">Gecikmiş</span> }
                                     else if (task.DueDate.HasValue && TaskDates.IsUpcoming(task.DueDate,Status.Todo,Model.Today)) { <span class="pen-upcoming" data-due-indicator hidden="@(task.Status == Status.Completed)">@(TaskDates.LocalDate(task.DueDate.Value) == Model.Today ? "Bugün" : "Yaklaşıyor")</span> }
@@ -160,6 +161,7 @@
                                 <select id="board-status-@task.Id" data-board-status aria-label="@task.Code görev durumunu değiştir">
                                     @foreach (var option in Enum.GetValues<Status>()) { <option value="@((int)option)" selected="@(task.Status == option)">@StatusText(option)</option> }
                                 </select>
+                                </div>
                             </article>
                         }
                     </div>
