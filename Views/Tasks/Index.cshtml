@@ -146,7 +146,7 @@
                 var columnTasks = Model.Tasks.Where(task => task.Status == status).ToList();
                 <section class="pen-board-column" data-board-column="@((int)status)" aria-labelledby="board-heading-@status">
                     <h2 id="board-heading-@status"><span>@StatusText(status)</span><span class="pen-board-count" data-board-count>@columnTasks.Count</span></h2>
-                    <div class="pen-board-cards" data-board-cards>
+                    <div class="pen-board-cards" data-board-cards tabindex="0" role="region" aria-label="@StatusText(status) görevleri">
                         @foreach (var task in columnTasks)
                         {
                             <article class="pen-board-card" draggable="true" data-board-card data-task-id="@task.Id" data-status="@((int)task.Status)">
@@ -156,7 +156,7 @@
                                     @if (task.DueDate.HasValue && TaskDates.IsOverdue(task.DueDate,Status.Todo,Model.Today)) { <span class="pen-overdue" data-due-indicator hidden="@(task.Status == Status.Completed)">Gecikmiş</span> }
                                     else if (task.DueDate.HasValue && TaskDates.IsUpcoming(task.DueDate,Status.Todo,Model.Today)) { <span class="pen-upcoming" data-due-indicator hidden="@(task.Status == Status.Completed)">@(TaskDates.LocalDate(task.DueDate.Value) == Model.Today ? "Bugün" : "Yaklaşıyor")</span> }
                                 </p>
-                                <label for="board-status-@task.Id">Durumu değiştir</label>
+                                <label class="pen-sr-only" for="board-status-@task.Id">Durumu değiştir</label>
                                 <select id="board-status-@task.Id" data-board-status aria-label="@task.Code görev durumunu değiştir">
                                     @foreach (var option in Enum.GetValues<Status>()) { <option value="@((int)option)" selected="@(task.Status == option)">@StatusText(option)</option> }
                                 </select>

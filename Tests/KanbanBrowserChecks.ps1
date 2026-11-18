@@ -73,6 +73,47 @@ try {
             Check (Eval ('document.documentElement.dataset.theme==="' + $theme + '"')) "theme applies: $width px $theme"
         }
     }
+    foreach($width in @(1440,768,390,320)) {
+        Cdp 'Emulation.setDeviceMetricsOverride' @{width=$width;height=900;deviceScaleFactor=1;mobile=$false} | Out-Null
+        foreach($theme in @('light','dark')) {
+            Eval ('document.querySelector(`[data-theme-choice="' + $theme + '"]`).click()') | Out-Null
+            Check (Eval 'document.documentElement.scrollWidth<=innerWidth&&[...document.querySelectorAll("[data-board-card]")].every(c=>c.scrollWidth<=c.clientWidth+1&&[...c.querySelectorAll("a,select")].every(e=>{const r=e.getBoundingClientRect(),p=c.getBoundingClientRect();return r.left>=p.left&&r.right<=p.right+1}))') "refined cards contain titles and controls at $width px $theme"
+            Check (Eval '[...document.querySelectorAll("[data-board-status]")].every(s=>s.tagName==="SELECT"&&s.getBoundingClientRect().height>=44&&s.labels.length===1&&!!s.getAttribute("aria-label"))') "native status selects retain accessible touch targets at $width px $theme"
+            Check (Eval '(()=>{const fields=[...document.querySelectorAll(".pen-search input,.pen-extra-filters select")];return fields.length>0&&fields.filter(e=>e.getBoundingClientRect().width>0).every(e=>e.getBoundingClientRect().height>=(innerWidth<=760?44:38))})()') "toolbar fields keep readable desktop and mobile sizes at $width px $theme"
+            if ($width -gt 760) {
+                Check (Eval '(()=>{const lists=[...document.querySelectorAll("[data-board-cards]")];return lists.length===3&&lists.every(e=>e.tabIndex===0&&e.getAttribute("role")==="region"&&!!e.getAttribute("aria-label")&&getComputedStyle(e).overflowY==="auto"&&e.clientHeight<=650)})()') "desktop columns have bounded keyboard-accessible scroll regions at $width px $theme"
+                Check (Eval '(()=>{const lists=[...document.querySelectorAll("[data-board-cards]")],busy=lists.find(e=>e.scrollHeight>e.clientHeight),others=lists.filter(e=>e!==busy);if(!busy)return false;const h=busy.closest("section").querySelector("h2"),top=h.getBoundingClientRect().top,page=scrollY,positions=others.map(e=>e.scrollTop);busy.scrollTop=80;const ok=busy.scrollTop>0&&h.getBoundingClientRect().top===top&&scrollY===page&&others.every((e,i)=>e.scrollTop===positions[i]);busy.scrollTop=0;return ok})()') "one column scrolls without moving heading or other columns at $width px $theme"
+            } else {
+                Check (Eval '[...document.querySelectorAll("[data-board-cards]")].every(e=>getComputedStyle(e).maxHeight==="none"&&e.scrollHeight<=e.clientHeight+1)') "mobile columns use page scrolling at $width px $theme"
+            }
+        }
+    }
+    Cdp 'Emulation.setDeviceMetricsOverride' @{width=1440;height=900;deviceScaleFactor=1;mobile=$false} | Out-Null
+    Eval 'window.qaScrollRegion=[...document.querySelectorAll("[data-board-cards]")].find(e=>e.scrollHeight>e.clientHeight);qaScrollRegion.scrollIntoView({block:"center"});qaScrollRegion.focus();window.qaPageY=scrollY;window.qaHeaderY=qaScrollRegion.closest("section").querySelector("h2").getBoundingClientRect().top' | Out-Null
+    Cdp 'Input.dispatchKeyEvent' @{type='keyDown';key='ArrowDown';code='ArrowDown';windowsVirtualKeyCode=40} | Out-Null
+    Cdp 'Input.dispatchKeyEvent' @{type='keyUp';key='ArrowDown';code='ArrowDown';windowsVirtualKeyCode=40} | Out-Null
+    Eval 'new Promise(resolve=>setTimeout(()=>resolve(true),250))' | Out-Null
+    Check (Eval 'document.activeElement===qaScrollRegion&&qaScrollRegion.matches(":focus-visible")&&getComputedStyle(qaScrollRegion).outlineStyle!=="none"&&qaScrollRegion.scrollTop>0&&scrollY===qaPageY&&qaScrollRegion.closest("section").querySelector("h2").getBoundingClientRect().top===qaHeaderY') 'keyboard scroll region keeps visible focus, heading and page stationary'
+    Eval 'qaScrollRegion.scrollTop=0' | Out-Null
+    Check (Eval '(()=>{const a=[...document.querySelectorAll(".pen-board-title")].find(e=>e.textContent.length===120);return !!a&&a.scrollWidth<=a.clientWidth+1&&a.textContent.length===120&&!!a.getAttribute("href")})()') 'maximum-length board title stays readable with its full details link'
+    Cdp 'Emulation.setDeviceMetricsOverride' @{width=1440;height=900;deviceScaleFactor=1;mobile=$false} | Out-Null
+    Eval 'qaCard().querySelector("select").focus()' | Out-Null
+    foreach($key in @(@{key='Home';code='Home';windowsVirtualKeyCode=36},@{key='ArrowDown';code='ArrowDown';windowsVirtualKeyCode=40},@{key='Tab';code='Tab';windowsVirtualKeyCode=9})) {
+        Cdp 'Input.dispatchKeyEvent' (@{type='keyDown'} + $key) | Out-Null
+        Cdp 'Input.dispatchKeyEvent' (@{type='keyUp'} + $key) | Out-Null
+        WaitUpdate
+    }
+    Check (Eval 'qaCard().dataset.status==="1"&&qaCard().closest("[data-board-column]").dataset.boardColumn==="1"&&!qaCard().querySelector("select").disabled') 'real browser keyboard changes native status select'
+    Cdp 'Emulation.setDeviceMetricsOverride' @{width=390;height=900;deviceScaleFactor=1;mobile=$true} | Out-Null
+    Cdp 'Emulation.setTouchEmulationEnabled' @{enabled=$true;maxTouchPoints=1} | Out-Null
+    $tap = Eval '(()=>{const a=qaCard().querySelector("a");a.scrollIntoView({block:"center"});const r=a.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()'
+    Cdp 'Input.dispatchTouchEvent' @{type='touchStart';touchPoints=@(@{x=$tap.x;y=$tap.y})} | Out-Null
+    Cdp 'Input.dispatchTouchEvent' @{type='touchEnd';touchPoints=@()} | Out-Null
+    Start-Sleep -Milliseconds 250
+    Check (Eval ('location.pathname.endsWith("/Tasks/Details/' + $TaskId + '")&&!!document.querySelector("main h1")')) 'emulated touch on board title opens details'
+    Cdp 'Emulation.setTouchEmulationEnabled' @{enabled=$false} | Out-Null
+    Cdp 'Emulation.setDeviceMetricsOverride' @{width=320;height=900;deviceScaleFactor=1;mobile=$false} | Out-Null
+    OpenPage '/Tasks?view=board'
     Eval '(()=>{const c=qaCard(),s=c.querySelector("select");s.focus();s.value="0";s.dispatchEvent(new Event("change",{bubbles:true}))})()' | Out-Null
     WaitUpdate
     Check (Eval 'qaCard().dataset.status==="0"&&qaCard().closest("[data-board-column]").dataset.boardColumn==="0"&&!qaCard().querySelector("select").disabled') 'select alternative persists a successful status update'
@@ -90,6 +131,12 @@ try {
     Eval '(()=>{window.fetch=async()=>{throw new TypeError("Failed to fetch")};const s=qaCard().querySelector("select");s.value="2";s.dispatchEvent(new Event("change",{bubbles:true}));})()' | Out-Null
     WaitUpdate
     Check (Eval 'qaCard().dataset.status==="1"&&!document.querySelector("[data-board-message]").textContent.includes("Failed to fetch")') 'network error rolls back and uses Turkish message'
+    Eval '(()=>{window.fetch=()=>new Promise(resolve=>window.qaResolve=resolve);const s=qaCard().querySelector("select");s.focus();s.value="2";s.dispatchEvent(new Event("change",{bubbles:true}))})()' | Out-Null
+    Check (Eval 'qaCard().getAttribute("aria-busy")==="true"&&qaCard().querySelector("select").disabled&&!qaCard().draggable&&qaCard().dataset.pending==="true"') 'pending request prevents duplicate changes and announces busy state'
+    Eval 'window.qaResolve(new Response("not-json",{status:200,headers:{"Content-Type":"text/plain"}}))' | Out-Null
+    WaitUpdate
+    Check (Eval 'qaCard().dataset.status==="1"&&qaCard().closest("[data-board-column]").dataset.boardColumn==="1"&&qaCard().nextElementSibling===window.qaPreviousNext&&qaCard().querySelector("select").value==="1"&&!qaCard().querySelector("select").disabled&&qaCard().draggable&&!qaCard().hasAttribute("aria-busy")&&document.activeElement===qaCard().querySelector("select")') 'malformed response restores card order, select, focus and interaction'
+    Check (Eval '[...document.querySelectorAll("[data-board-column]")].every(c=>Number(c.querySelector("[data-board-count]").textContent)===c.querySelectorAll("[data-board-card]").length)&&document.querySelector("[data-board-message]").dataset.error==="true"') 'failed pending update restores counts and accessible error feedback'
     Eval 'window.fetch=window.qaOriginalFetch' | Out-Null
     OpenPage '/Tasks/Create'
     Check (Eval 'document.documentElement.dataset.theme==="dark"&&!!document.querySelector("form[novalidate]")') 'theme and existing create form survive navigation'
@@ -120,6 +167,16 @@ try {
     Check (Eval 'document.querySelectorAll("[data-board-card]").length>10&&!document.querySelector(".pen-status-tabs")') 'filtered second list page transitions to complete unfiltered board'
     ClickView 'list'
     Check (Eval '(()=>{const q=new URL(location.href).searchParams;return q.get("view")==="list"&&["0","Todo"].includes(q.get("Filter.Status"))&&q.get("Filter.Page")==="2"&&q.get("Filter.PageSize")==="5"&&!document.querySelector("[data-board-view]")&&document.querySelectorAll("[data-list-task]").length>0&&document.querySelectorAll("[data-list-task]").length<=5})()') 'return link preserves selected status, second page and page size'
+    foreach($width in @(1440,390,320)) {
+        Cdp 'Emulation.setDeviceMetricsOverride' @{width=$width;height=900;deviceScaleFactor=1;mobile=$false} | Out-Null
+        foreach($theme in @('light','dark')) {
+            OpenPage '/Tasks?view=list&Filter.Status=0&Filter.Priority=3&Filter.PageSize=20&Filter.Sort=Oldest'
+            Eval ('document.querySelector(`[data-theme-choice="' + $theme + '"]`).click();document.querySelector(".pen-search").requestSubmit()') | Out-Null
+            Start-Sleep -Milliseconds 200
+            Eval 'new Promise(resolve=>{function wait(){if(document.readyState==="complete"&&document.querySelector("main"))document.fonts.ready.then(()=>resolve(true));else setTimeout(wait,30)}wait()})' | Out-Null
+            Check (Eval '(()=>{const q=new URL(location.href).searchParams,fields=[...document.querySelectorAll(".pen-search input[type=search],.pen-extra-filters select")];return fields.length===4&&fields.every(e=>{const r=e.getBoundingClientRect();return r.height>=(innerWidth<=760?44:38)&&r.left>=0&&r.right<=innerWidth})&&document.documentElement.scrollWidth<=innerWidth&&q.get("view")==="list"&&["0","Todo"].includes(q.get("Filter.Status"))&&["3","Critical"].includes(q.get("Filter.Priority"))&&q.get("Filter.PageSize")==="20"&&["1","Oldest"].includes(q.get("Filter.Sort"))&&!document.querySelector("[data-board-view]")})()') "list toolbar submission retains filters and readable fields at $width px $theme"
+        }
+    }
     Write-Output "$script:passed browser checks passed. Owned test task only; browser profile retained in temporary directory."
 } finally {
     $socket.Dispose()

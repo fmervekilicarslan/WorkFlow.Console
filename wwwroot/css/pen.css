@@ -60,19 +60,19 @@
 .pen-metric-icon.progress { background: #eeedff; color: #4f46e5; }
 .pen-metric-icon.completed { background: #eaf7f1; color: #22856d; }
 .pen-task-panel { border: 1px solid var(--pen-line); border-radius: 12px; background: white; overflow: hidden; }
-.pen-table-toolbar { padding: 20px 22px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.pen-table-toolbar { padding: 14px 22px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .pen-status-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
 .pen-status-tabs a { padding: 9px 12px; color: var(--pen-text); font-size: 12px; line-height: 15px; border-radius: 6px; white-space: nowrap; }
 .pen-status-tabs a.active { background: #eef0ff; color: var(--pen-purple); font-weight: 500; }
 .pen-search { position: relative; width: 218px; flex-shrink: 0; }
-.pen-search input { width: 100%; height: 34px; padding: 8px 10px 8px 35px; border: 1px solid var(--pen-line); border-radius: 6px; color: #47536c; font-size: 12px; background: white; min-width: 0; }
+.pen-search input { width: 100%; height: 38px; padding: 8px 10px 8px 35px; border: 1px solid var(--pen-line); border-radius: 6px; color: #47536c; font-size: 12px; background: white; min-width: 0; }
 .pen-search input::placeholder { color: #98a0b2; }
-.pen-search button { position: absolute; left: 2px; top: 1px; color: #98a0b2; }
+.pen-search button { position: absolute; left: 2px; top: 3px; color: #98a0b2; }
 .pen-extra-filters { border-top: 1px solid var(--pen-line); padding: 0 22px; font-size: 11px; color: var(--pen-text); }
 .pen-extra-filters summary { width: fit-content; padding: 9px 0; cursor: pointer; }
-.pen-extra-filters form { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding: 8px 0 16px; }
+.pen-extra-filters form { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding: 6px 0 12px; }
 .pen-extra-filters form > div:not(.pen-validation) { display: grid; gap: 5px; flex: 1 1 150px; }
-.pen-extra-filters select { min-width: 0; width: 100%; padding: 8px 10px; border-radius: 6px; font-size: 12px; }
+.pen-extra-filters select { min-width: 0; width: 100%; height: 38px; padding: 8px 10px; border: 1px solid var(--pen-line); border-radius: 6px; background: white; color: #34405c; font-size: 12px; }
 .pen-extra-filters .pen-button { padding: 8px 12px; }
 .pen-validation { color: #a53649; flex-basis: 100%; }
 .pen-validation.validation-summary-valid { display: none; }
@@ -83,7 +83,7 @@
 .pen-task-table th:nth-child(2) { width: 108px; }
 .pen-task-table th:nth-child(3) { width: 198px; }
 .pen-task-table th:last-child { width: 92px; }
-.pen-task-row td { padding: 19px 8px; border-bottom: 1px solid #eef0f5; vertical-align: middle; }
+.pen-task-row td { padding: 14px 8px; border-bottom: 1px solid #eef0f5; vertical-align: middle; }
 .pen-task-row td:first-child { padding-left: 22px; }
 .pen-task-row td:last-child { padding-right: 14px; }
 .pen-task-title { display: flex; gap: 10px; align-items: baseline; }
@@ -204,12 +204,13 @@
     .pen-task-panel { background: transparent; border: 0; border-radius: 0; overflow: visible; }
     .pen-table-toolbar { display: flex; flex-direction: column-reverse; align-items: stretch; gap: 12px; padding: 0; }
     .pen-search { width: 100%; }
-    .pen-search input { height: 42px; background: white; }
-    .pen-search button { top: 5px; }
+    .pen-search input { height: 44px; background: white; }
+    .pen-search button { top: 6px; }
     .pen-status-tabs { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
     .pen-status-tabs a { text-align: center; padding: 12px 8px; }
     .pen-extra-filters { padding: 0; border: 0; margin: 10px 0 16px; }
     .pen-extra-filters form { padding: 8px 0; }
+    .pen-extra-filters select { height: 44px; }
     .pen-task-table, .pen-task-table tbody { display: block; width: 100%; }
     .pen-task-table thead { display: none; }
     .pen-task-row { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 16px 6px; border: 1px solid var(--pen-line); border-radius: 12px; padding: 16px; background: white; margin-bottom: 12px; }
@@ -329,7 +330,7 @@ html[data-theme="dark"] .pen-app .pen-skip:focus { background: #26354a; color: w
 @media (max-width: 760px) { html[data-theme="dark"] .pen-app .pen-task-panel { background: transparent; } }
 
 /* Liste ve pano aynı filtrelenmiş görev sayfasını paylaşır. */
-.pen-view-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 22px; border-top: 1px solid var(--pen-line); }
+.pen-view-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 22px; border-top: 1px solid var(--pen-line); }
 .pen-view-toolbar p { margin: 0; color: var(--pen-text); font-size: 11px; }
 .pen-view-switch { display: inline-flex; flex-shrink: 0; padding: 3px; border: 1px solid var(--pen-line); border-radius: 8px; background: #f6f7fb; }
 .pen-view-switch a { border: 0; border-radius: 5px; padding: 7px 13px; color: var(--pen-text); background: transparent; cursor: pointer; }
@@ -339,21 +340,25 @@ html[data-theme="dark"] .pen-app .pen-skip:focus { background: #26354a; color: w
 .pen-board-message { margin: 0 0 12px; padding: 10px 12px; border-radius: 7px; background: #eef0ff; color: #3530a8; }
 .pen-board-message[data-error="true"] { background: #fff0f2; color: #a53649; }
 .pen-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 14px; }
-.pen-board-column { min-width: 0; padding: 14px; border: 1px solid var(--pen-line); border-radius: 10px; background: #f8f9fc; }
-.pen-board-column h2 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 14px; font-size: 13px; font-weight: 600; }
+.pen-board-column { min-width: 0; padding: 12px; border: 1px solid var(--pen-line); border-radius: 10px; background: #f8f9fc; }
+.pen-board-column h2 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 10px; font-size: 13px; font-weight: 600; }
 .pen-board-count { min-width: 24px; padding: 2px 7px; border-radius: 5px; text-align: center; color: var(--pen-text); background: #e9ecf4; font-size: 11px; }
-.pen-board-cards { display: grid; gap: 10px; min-height: 12px; }
+.pen-board-cards { display: grid; gap: 8px; min-height: 12px; align-content: start; }
+.pen-board-cards:focus-visible { outline: 2px solid var(--pen-purple); outline-offset: -2px; }
+@media (min-width: 761px) { .pen-board-cards { max-height: clamp(300px, 60vh, 650px); overflow-y: auto; overscroll-behavior: contain; } }
 .pen-board-column.is-drop-target { border-color: #8078ee; background: #f0efff; }
-.pen-board-card { display: grid; gap: 10px; min-width: 0; padding: 14px; border: 1px solid var(--pen-line); border-radius: 9px; background: white; box-shadow: 0 2px 8px #17233d0a; }
+.pen-board-card { display: grid; gap: 5px; min-width: 0; padding: 10px; border: 1px solid var(--pen-line); border-radius: 9px; background: white; box-shadow: 0 2px 8px #17233d0a; }
 .pen-board-card[draggable="true"] { cursor: grab; }
-.pen-board-card.is-dragging { opacity: .55; }
+.pen-board-card:hover, .pen-board-card:focus-within { border-color: #8078ee; box-shadow: 0 2px 10px #6158cd25; }
+.pen-board-card.is-dragging { opacity: .55; cursor: grabbing; }
 .pen-board-card[aria-busy="true"] { opacity: .65; }
 .pen-board-card-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 .pen-board-title { color: #26324c; font-weight: 600; overflow-wrap: anywhere; }
 .pen-board-title:hover { text-decoration: underline; }
 .pen-board-due { margin: 0; color: var(--pen-text); font-size: 11px; }
 .pen-board-card label { color: var(--pen-text); font-size: 11px; }
-.pen-board-card select { min-width: 0; width: 100%; padding: 8px 30px 8px 10px; border: 1px solid var(--pen-line); border-radius: 6px; background-color: #fff; color: #34405c; }
+.pen-board-card select { min-width: 0; width: fit-content; max-width: 100%; min-height: 44px; padding: 8px 30px 8px 10px; border: 1px solid var(--pen-line); border-radius: 6px; background-color: #fff; color: #34405c; }
+.pen-board-card :is(a, select):focus-visible { outline: 2px solid var(--pen-purple); outline-offset: 2px; }
 .pen-board-empty { margin: 8px 0 0; color: var(--pen-text); font-size: 11px; }
 html[data-theme="dark"] .pen-app :is(.pen-view-switch,.pen-board-column) { background-color: #26354a; }
 html[data-theme="dark"] .pen-app :is(.pen-board-card,.pen-board-card select) { background-color: #1d293b; color: #edf2fa; border-color: var(--pen-line); }
@@ -370,12 +375,12 @@ html[data-theme="dark"] .pen-app .pen-board-message[data-error="true"] { backgro
 /* Takvim mevcut kart ve tema dilini kullanır. */
 .pen-calendar-panel { min-width: 0; padding: 22px; border: 1px solid var(--pen-line); border-radius: 12px; background: white; }
 .pen-calendar-toolbar, .pen-calendar-navigation { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.pen-calendar-toolbar { justify-content: space-between; gap: 16px; }
+.pen-calendar-toolbar { justify-content: space-between; gap: 10px; }
 .pen-calendar-toolbar .pen-button { padding: 6px 10px; }
 .pen-calendar-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding: 12px 0; margin: 4px 0 12px; border-bottom: 1px solid var(--pen-line); }
 .pen-calendar-field { display: grid; gap: 3px; flex: 1 1 135px; min-width: 0; }
 .pen-calendar-field label { font-size: 11px; color: var(--pen-text); }
-.pen-calendar-field input, .pen-calendar-field select { width: 100%; min-width: 0; height: 38px; padding: 8px 10px; border: 1px solid var(--pen-line); border-radius: 6px; background-color: white; color: #34405c; }
+.pen-calendar-field input, .pen-calendar-field select { width: 100%; min-width: 0; height: 38px; padding: 8px 10px; border: 1px solid var(--pen-line); border-radius: 6px; background-color: white; color: #34405c; font-size: 12px; }
 .pen-calendar-current-date { color: var(--pen-text); font-size: 10px; }
 .pen-calendar-filters .pen-button { padding: 8px 12px; }
 .pen-calendar-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
@@ -422,4 +427,5 @@ html[data-theme="dark"] .pen-app .pen-calendar-today { background: #454173; colo
     .pen-calendar-grid { grid-template-columns: minmax(0, 1fr); }
     .pen-calendar-toolbar { align-items: flex-start; }
     .pen-calendar-navigation { width: 100%; }
+    .pen-calendar-field input, .pen-calendar-field select { height: 44px; }
 }

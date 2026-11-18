@@ -80,3 +80,19 @@ Odaklı mod yalnız mevcut izole veritabanında on geçici görev, kendi HTTP su
 İlk uzun başlık hatası, Windows PowerShell 5'in BOM içermeyen UTF-8 betiğindeki Türkçe sabiti yanlış okumasından kaynaklandı: gerçek DOM `ğ` kodu 287, yanlış okunan test beklentisi 196/376 idi. JavaScript Unicode kaçışları aynı sıkı assertion'ı kodlamadan bağımsız hâle getirdi; ürün HTML/CSS değişikliği gerekmedi. Odaklı kontrol düzeltme sonrası geçti; ardından tam koşu tekrar başarıyla tamamlandı.
 
 Bu koşuda migration veya kaynak oluşturma yapılmadı. Canlı `workflow_db` fingerprint'i ve tüm özgün test görevleri değişmedi; test veritabanı/rol korundu. Tanı ve tam koşu logları Git dışındaki `.local-checkpoints/calendar-v11-focused-*.log` ve `calendar-v11-premerge-*.log` dosyalarındadır.
+
+## UI Refinements V1 kontrolleri
+
+Son tam koşu **526/526 başarılıdır**: 68 bağlantısız + 16 PostgreSQL + 442 Stage2. Mevcut 471 kontrolün tamamı korunur; 55 Chrome regresyonu eklenmiştir. Kanban/Liste Chrome grubu 85, Takvim Chrome grubu 85 kontroldür. Release uygulama ve test derlemesi sıfır hata ve uyarıyla geçti. Tarayıcı seçeneği kapalıyken toplam 356 kontrol değişmez. Çalıştırma komutları yukarıdaki Release, bağlantısız ve `WORKFLOW_BROWSER_CHECKS=1` ile `Run-IsolatedChecks.ps1 -ExistingOnly` komutlarıdır.
+
+Yeni kapsam:
+
+- İki temada 1440/768/390/320 px: başlık ve native durum seçicisinin kart içinde kalması, 44 px dokunma hedefi ve erişilebilir adı; araç çubuğu alanlarının okunabilir boyutları.
+- Masaüstünde gerçek çok görevli sütunda sınırlı yükseklik ve bağımsız kaydırma; başlığın, komşu sütunların ve sayfanın yerinde kalması. Odaklanabilir, adlandırılmış kaydırma bölgesine CDP ArrowDown gönderilerek görünür odak ve gerçek kaydırma doğrulanır. Mobilde iç kaydırma yerine sayfa akışı denetlenir.
+- 120 karakter başlığın tam metni ve Details bağlantısı; native select üzerinde CDP Home/ArrowDown/Tab ile gerçek tarayıcı klavye akışı; başlık bağlantısına CDP touchStart/touchEnd ile Details gezinmesi.
+- Bekleyen istekte select'in devre dışı kalması, `aria-busy` ve drag koruması; bozuk JSON yanıtında eski sütun/sıra/select/odak, etkileşim ve sayaçların geri alınması. Mevcut başarılı kalıcılık, 503/ağ hatası, drag/drop, CSRF, filtre ve görünüm tercihi testleri korunur.
+- Liste ve Takvimde iki temada 1440/390/320 px gerçek form gönderimi: alan yükseklikleri, yatay taşma ve Liste durum/öncelik/sayfa boyutu/sıralama ile Takvim tarih/arama değerlerinin korunması.
+
+Dokunma testi Chrome CDP emülasyonudur; fiziksel telefon/tablet testi değildir. HTML drag/drop testi sentetik olaylarla devam eder. Fiziksel sürükleme ve ekran görüntüsüyle görsel onay bu koşunun kanıtı değildir.
+
+Testler tek seri QA işi olarak mevcut izole veritabanında çalıştı; migration veya kaynak oluşturma yapılmadı. Takvim GET snapshot'ı, fixture temizliği sonrası tüm özgün görevler, kalıcı kodlar ve migration geçmişi aynı kaldı. Dış runner canlı `workflow_db` görev/migration/sequence/sahiplik/izin fingerprint'inin değişmediğini doğruladı. Test veritabanı/rol ve normal uygulama korundu; yalnız QA'nın sunucusu/Chrome süreci kapatıldı. Git dışı son loglar: `.local-checkpoints/ui-refinements-v1-final-{build,offline,isolated}.log`.

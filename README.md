@@ -40,6 +40,8 @@ Görünüm URL'de `view=list` veya `view=board` ile belirlenir; açık URL seçi
 
 Kartı başka sütuna sürükleyebilir veya karttaki durum alanını kullanabilirsiniz. Güncelleme CSRF korumalı MVC endpoint'i üzerinden mevcut `TaskService` ile PostgreSQL'e kaydedilir. Başarısız istekte kart önceki durumuna döner ve Türkçe hata gösterilir. Pano etkileşimleri JavaScript gerektirir; mevcut liste formuyla durum güncelleme kullanılmaya devam edilebilir. Kanban için yeni migration gerekmez.
 
+Liste, Pano ve Takvim araç çubukları ortak kontrol ölçüleri ve daha sıkı boşluklar kullanır. Kanban kartları görev kodunu, başlığı, önceliği ve teslim tarihini koruyan kompakt düzendedir; başlık görev detayını açar. Durum seçicisi daha dar, klavyeyle kullanılabilir ve dokunma için en az 44 piksel yüksekliğindedir. Masaüstünde her sütunun görev alanı bağımsız kaydırılırken başlığı görünür kalır; bu alanlara Tab ile odaklanabilirsiniz. Mobilde sütunlar alt alta ve sayfayla birlikte kayar. Açık/koyu tema, filtre adresleri ve görünüm tercihleri korunur.
+
 ## Görev Takvimi V1.1
 
 Menüdeki **Takvim** bağlantısı `/Calendar` sayfasını açar. Varsayılan görünüm **Ay**dır; **Gün / Hafta / Ay** bağlantıları, **Önceki / Bugün / Sonraki** kontrolleriyle tarih aralığını değiştirebilirsiniz. Görünüm tercihi tarayıcıda saklanır; URL'deki açık `view=day|week|month` seçimi önceliklidir. Arama, durum ve öncelik filtreleri tarih ve görünüm bağlamını korur.

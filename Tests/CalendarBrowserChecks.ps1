@@ -66,6 +66,11 @@ try {
                 Check (Eval ('document.documentElement.dataset.theme==="' + $theme + '"')) "$view applies $theme theme at $width px"
                 if ($view -eq 'month') {
                     Check (Eval '(()=>{const d=document.querySelector("[data-calendar-day=\"2028-02-29\"]");return d.querySelectorAll(":scope > .pen-calendar-token").length===3&&[...d.querySelectorAll(":scope > .pen-calendar-token")].every(e=>e.getBoundingClientRect().height<=30)&&d.getBoundingClientRect().height<=240})()') "month limits busy day to three compact labels at $width px $theme"
+                    if ($width -ne 768) {
+                        Eval 'document.querySelector(".pen-calendar-filters").requestSubmit()' | Out-Null
+                        WaitPage
+                        Check (Eval ('(()=>{const q=new URL(location.href).searchParams,fields=[...document.querySelectorAll(".pen-calendar-filters input:not([type=hidden]),.pen-calendar-filters select")];return fields.length===4&&fields.every(e=>{const r=e.getBoundingClientRect();return r.height>=(innerWidth<=760?44:38)&&r.left>=0&&r.right<=innerWidth})&&document.documentElement.scrollWidth<=innerWidth&&q.get("view")==="month"&&q.get("date")==="29.02.2028"&&q.get("Filter.Search")==="' + $Search + '"&&document.querySelector("#calendar-date").value==="29.02.2028"})()')) "calendar toolbar submits preserved date and search without overflow at $width px $theme"
+                    }
                 }
             }
         }
