@@ -15,7 +15,7 @@ using WorkFlow.Mvc.ViewModels;
 
 internal static class CalendarChecks
 {
-    public static async Task<int> Run(HttpClient client, Func<WorkFlowDbContext> open)
+    public static async Task<int> Run(HttpClient client, Func<WorkFlowDbContext> open, TestAccount account, TestAuthHost host, TestSession session)
     {
         var count = 0;
         void Check(bool ok, string label)
@@ -38,6 +38,7 @@ internal static class CalendarChecks
         TaskItem Add(string title, DateTime? due, Status status = Status.Todo, Priority priority = Priority.Normal)
         {
             var task = new TaskItem(marker + " " + title, "Calendar fixture <safe>", priority, status) { DueDate = due };
+            task.AssignOwner(account.UserId);
             fixtures.Add(task); return task;
         }
         var beforeStart = Add("before-start", start.AddTicks(-10));
@@ -53,7 +54,7 @@ internal static class CalendarChecks
         {
             using var setup = open();
             setup.Tasks.AddRange(fixtures); await setup.SaveChangesAsync();
-            var service = new TaskService(setup);
+            var service = new TaskService(setup, account);
             var range = service.TakvimGorevleriniGetir(start, end, marker);
             Check(range.Count == 10 && range.Any(t => t.Id == atStart.Id) && range.Any(t => t.Id == beforeEnd.Id)
                 && range.All(t => t.Id != beforeStart.Id && t.Id != atEnd.Id), "half-open UTC range includes midnight and excludes adjacent microseconds");
@@ -74,7 +75,7 @@ internal static class CalendarChecks
             using (var db = new WorkFlowDbContext(new DbContextOptionsBuilder<WorkFlowDbContext>()
                 .UseNpgsql(setup.Database.GetConnectionString()).AddInterceptors(commands).Options))
             {
-                var controller = new CalendarController(new TaskService(db), new Project("QA"));
+                var controller = new CalendarController(new TaskService(db, account), new Project("QA"));
                 var model = (CalendarViewModel)((ViewResult)controller.Index(new CalendarFilterViewModel { Search = marker }, "day", "2028-02-29")).Model!;
                 Check(commands.Sql.Count == 3 && model.Days.Count == 1 && model.Days[0].Tasks.Count == 10, "controller executes range plus undated count/page queries");
                 Check(!db.ChangeTracker.Entries<TaskItem>().Any(), "all calendar query results are AsNoTracking");
@@ -132,6 +133,7 @@ internal static class CalendarChecks
                 foreach (var argument in new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
                     Path.Combine(Directory.GetCurrentDirectory(), "Tests", "CalendarBrowserChecks.ps1"), "-BaseUrl", client.BaseAddress!.ToString().TrimEnd('/'),
                     "-Search", marker, "-TaskId", atStart.Id.ToString() }) startBrowser.ArgumentList.Add(argument);
+                host.ConfigureBrowser(startBrowser, session);
                 using var browser = Process.Start(startBrowser)!;
                 var stdout = browser.StandardOutput.ReadToEndAsync(); var stderr = browser.StandardError.ReadToEndAsync();
                 await browser.WaitForExitAsync(); var output = await stdout; Console.Write(output);

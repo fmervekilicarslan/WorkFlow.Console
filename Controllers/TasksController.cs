@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using WorkFlow.Mvc.Enums;
 using WorkFlow.Mvc.Exceptions;
 using WorkFlow.Mvc.Interfaces;
@@ -10,6 +11,8 @@ using Npgsql;
 
 namespace WorkFlow.Mvc.Controllers;
 
+[Authorize]
+[ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
 public class TasksController : Controller
 {
     private readonly ITaskService _taskService;
@@ -201,6 +204,7 @@ public class TasksController : Controller
     [ValidateAntiForgeryToken]
     public IActionResult Delete(Guid gorevId, [Bind(Prefix = "Filter")] TaskFilterViewModel? filter = null)
     {
+        if (_taskService.GorevGetir(gorevId) is null) return MissingTask();
         try
         {
             _taskService.GorevSil(gorevId);
@@ -238,6 +242,7 @@ public class TasksController : Controller
             TempData["Error"] = "Geçerli bir görev ve durum seçin.";
             return RedirectToAction(nameof(Index));
         }
+        if (_taskService.GorevGetir(gorevId) is null) return MissingTask();
         try
         {
             _taskService.GorevDurumunuGuncelle(gorevId, yeniDurum);
@@ -328,5 +333,6 @@ ResponseCacheLocation, ASP.NET Core MVC'nin hazır bir enum türüdür.
 
 None, burada önbellekleme konumu seçilmediğini ifade eden enum üyesidir.*/
     //Hata sayfası metodu
+    [AllowAnonymous]
     public IActionResult Error() => View();
 }

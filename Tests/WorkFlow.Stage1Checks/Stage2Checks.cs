@@ -17,19 +17,19 @@ internal static class Stage2Checks
     {
         var connection = await TestDatabase.VerifiedConnection();
         WorkFlowDbContext Open() => new(new DbContextOptionsBuilder<WorkFlowDbContext>().UseNpgsql(connection.ConnectionString).Options);
+        await using var account = await TestAccount.Create(Open);
         int count = 0;
         void Check(bool ok, string message)
         { if (!ok) throw new InvalidOperationException(message); Console.WriteLine("PASS: " + message); count++; }
         using var initial = Open();
         var before = JsonSerializer.Serialize(await initial.Tasks.AsNoTracking().OrderBy(t => t.Id).ToListAsync());
         var migrations = (await initial.Database.GetAppliedMigrationsAsync()).ToArray();
-        Check(migrations.Length == 2, "Two existing migrations, no new schema required");
+        Check(migrations.Length == 3 && migrations.SequenceEqual(initial.Database.GetMigrations()), "Existing original and Identity migrations applied, no pending schema changes");
         var marker = "STAGE2-" + Guid.NewGuid().ToString("N");
-        Process? server = null;
         try
         {
             using var db = Open();
-            var service = new TaskService(db);
+            var service = new TaskService(db, account);
             var created = new List<TaskItem>();
             var priorities = new[] { Priority.Low, Priority.Normal, Priority.High, Priority.Critical };
             var today = TaskDates.LocalDate(DateTime.UtcNow);
@@ -79,7 +79,7 @@ internal static class Stage2Checks
                 service.GorevDurumunuGuncelle(target.Id, status);
                 using var read = Open();
                 var savedStatus = await read.Tasks.AsNoTracking().SingleAsync(t => t.Id == target.Id);
-                var summary = new TaskService(read).OzetGetir();
+                var summary = new TaskService(read, account).OzetGetir();
                 Check(savedStatus.Status == status && savedStatus.CodeNumber == persisted.CodeNumber, "Persisted status transition preserves code: " + status);
                 Check(summary.Total == 12 && summary.Todo == (status == Status.Todo ? 12 : 11)
                     && summary.InProgress == (status == Status.InProgress ? 1 : 0)
@@ -87,30 +87,12 @@ internal static class Stage2Checks
             }
             Check(service.GorevGetir(Guid.NewGuid()) is null && !service.GorevGuncelle(Guid.NewGuid(), "Missing", null, Priority.Low, Status.Todo, null), "Missing task read and update are handled");
 
-            var portProbe = new TcpListener(IPAddress.Loopback, 0); portProbe.Start();
-            var port = ((IPEndPoint)portProbe.LocalEndpoint).Port; portProbe.Stop();
-            var start = new ProcessStartInfo("dotnet") { WorkingDirectory = Directory.GetCurrentDirectory(), UseShellExecute = false,
-                CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
-            start.ArgumentList.Add(Path.Combine(Directory.GetCurrentDirectory(), "bin", "Release", "net10.0", "WorkFlow.Mvc.dll"));
-            start.ArgumentList.Add("--urls"); start.ArgumentList.Add($"http://127.0.0.1:{port}");
-            start.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
-            start.Environment["DOTNET_ENVIRONMENT"] = "Development";
-            start.Environment["ConnectionStrings__WorkFlowDb"] = connection.ConnectionString;
-            start.Environment["Logging__LogLevel__Default"] = "Critical";
-            server = Process.Start(start)!;
-            server.OutputDataReceived += (_, _) => { }; server.ErrorDataReceived += (_, _) => { };
-            server.BeginOutputReadLine(); server.BeginErrorReadLine();
-            using var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, CookieContainer = new CookieContainer() })
-            { BaseAddress = new Uri($"http://127.0.0.1:{port}"), Timeout = TimeSpan.FromSeconds(20) };
-            client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
-            var ready = false;
-            for (int i = 0; i < 40; i++)
-            {
-                try { using var response = await client.GetAsync("/Tasks/Create"); if (response.IsSuccessStatusCode) { ready = true; break; } }
-                catch (HttpRequestException) { }
-                await Task.Delay(250);
-            }
-            Check(ready, "MVC test server started on isolated local port");
+            await using var host = await TestAuthHost.Start(connection.ConnectionString);
+            using var session = host.CreateSession();
+            var client = session.Client;
+            await host.SignIn(session, account);
+            using var readyResponse = await client.GetAsync("/Tasks/Create");
+            Check(readyResponse.IsSuccessStatusCode, "MVC HTTPS test server started on isolated local port with real authenticated session");
             async Task<string> Get(string path) => await client.GetStringAsync(path);
             string Token(string html) => WebUtility.HtmlDecode(Regex.Match(html, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value);
             async Task<HttpResponseMessage> Post(string path, Dictionary<string, string> values) => await client.PostAsync(path, new FormUrlEncodedContent(values));
@@ -263,6 +245,7 @@ internal static class Stage2Checks
                     Path.Combine(Directory.GetCurrentDirectory(), "Tests", "KanbanBrowserChecks.ps1"),
                     "-BaseUrl", client.BaseAddress!.ToString().TrimEnd('/'), "-TaskId", httpTask.Id.ToString() })
                     browserStart.ArgumentList.Add(argument);
+                host.ConfigureBrowser(browserStart, session);
                 using var browser = Process.Start(browserStart)!;
                 var browserOutput = browser.StandardOutput.ReadToEndAsync();
                 var browserErrors = browser.StandardError.ReadToEndAsync();
@@ -276,11 +259,11 @@ internal static class Stage2Checks
             fields = new() { ["gorevId"] = httpTask.Id.ToString(), ["Filter.Search"] = marker, ["Filter.Sort"] = "Oldest", ["Filter.Page"] = "2", ["__RequestVerificationToken"] = Token(list) };
             using var delete = await Post("/Tasks/Delete", fields);
             Check(delete.StatusCode == HttpStatusCode.Redirect && delete.Headers.Location!.ToString().Contains("Filter.Page=2") && !await httpDb.Tasks.AnyAsync(t => t.Id == httpTask.Id), "HTTP deletion preserves list context and removes only test task");
-            count += await CalendarChecks.Run(client, Open);
+            count += await CalendarChecks.Run(client, Open, account, host, session);
+            count += await AuthenticationChecks.Run(host, Open);
         }
         finally
         {
-            if (server is not null) { if (!server.HasExited) { server.Kill(true); await server.WaitForExitAsync(); } server.Dispose(); }
             using var cleanup = Open();
             await cleanup.Tasks.Where(t => t.Title.StartsWith(marker)).ExecuteDeleteAsync();
         }

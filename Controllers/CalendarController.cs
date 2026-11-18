@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Npgsql;
 using WorkFlow.Mvc.Interfaces;
 using WorkFlow.Mvc.Models;
@@ -8,6 +9,8 @@ using WorkFlow.Mvc.ViewModels;
 
 namespace WorkFlow.Mvc.Controllers;
 
+[Authorize]
+[ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
 public sealed class CalendarController(ITaskService taskService, Project project) : Controller
 {
     [HttpGet]

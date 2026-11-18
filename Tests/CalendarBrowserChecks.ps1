@@ -1,11 +1,11 @@
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$BaseUrl, [Parameter(Mandatory)][string]$Search, [Parameter(Mandatory)][Guid]$TaskId, [switch]$FocusedLongTitle)
 $ErrorActionPreference = 'Stop'
-if ($BaseUrl -notmatch '^http://127\.0\.0\.1:\d+$' -or $Search -notmatch '^CALENDAR-[a-f0-9]{32}$') { throw 'An isolated local test server and calendar fixture marker are required.' }
+if ($BaseUrl -notmatch '^https://127\.0\.0\.1:\d+$' -or $Search -notmatch '^CALENDAR-[a-f0-9]{32}$' -or $env:WORKFLOW_BROWSER_CERT_SPKI -notmatch '^[A-Za-z0-9+/]{43}=$' -or [string]::IsNullOrWhiteSpace($env:WORKFLOW_BROWSER_COOKIE)) { throw 'A pinned isolated HTTPS server, authenticated cookie and calendar fixture marker are required.' }
 $probe = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
 $probe.Start(); $debugPort = $probe.LocalEndpoint.Port; $probe.Stop()
 $profile = Join-Path ([IO.Path]::GetTempPath()) ('workflow-calendar-' + [Guid]::NewGuid().ToString('N'))
-$chrome = Start-Process 'C:\Program Files\Google\Chrome\Application\chrome.exe' -WindowStyle Hidden -PassThru -ArgumentList @('--headless=new', '--remote-debugging-address=127.0.0.1', "--remote-debugging-port=$debugPort", "--user-data-dir=$profile", '--no-first-run', '--no-default-browser-check', 'about:blank')
+$chrome = Start-Process 'C:\Program Files\Google\Chrome\Application\chrome.exe' -WindowStyle Hidden -PassThru -ArgumentList @('--headless=new', "--ignore-certificate-errors-spki-list=$env:WORKFLOW_BROWSER_CERT_SPKI", '--remote-debugging-address=127.0.0.1', "--remote-debugging-port=$debugPort", "--user-data-dir=$profile", '--no-first-run', '--no-default-browser-check', 'about:blank')
 $socket = [Net.WebSockets.ClientWebSocket]::new()
 $script:messageId = 0
 $script:passed = 0
@@ -45,6 +45,9 @@ try {
     $page=$targets | Where-Object type -eq 'page' | Select-Object -First 1
     $socket.ConnectAsync([Uri]$page.webSocketDebuggerUrl,[Threading.CancellationToken]::None).GetAwaiter().GetResult() | Out-Null
     Cdp 'Page.enable' @{} | Out-Null
+    Cdp 'Network.enable' @{} | Out-Null
+    $cookieResult = Cdp 'Network.setCookie' @{name='.WorkFlow.Identity';value=$env:WORKFLOW_BROWSER_COOKIE;url=$BaseUrl;secure=$true;httpOnly=$true;sameSite='Lax'}
+    if (-not $cookieResult.success) { throw 'Authenticated HTTPS browser cookie was rejected.' }
     $query = '&date=2028-02-29&Filter.Search=' + $Search
     if ($FocusedLongTitle) {
         Cdp 'Emulation.setDeviceMetricsOverride' @{width=320;height=900;deviceScaleFactor=1;mobile=$false} | Out-Null

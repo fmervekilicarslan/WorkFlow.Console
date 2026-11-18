@@ -1,0 +1,22 @@
+@model LoginViewModel
+@{
+    ViewData["Title"] = "Giriş yap";
+    ViewData["PenPage"] = "account";
+    bool HasError(string field) => ViewData.ModelState[field]?.Errors.Count > 0;
+}
+<div class="pen-auth">
+    <div class="pen-heading"><div><h1>Tekrar hoş geldin.</h1><p>Görevlerine kaldığın yerden devam et.</p></div></div>
+    <section class="pen-form-card" aria-labelledby="login-heading">
+        <header><span class="pen-form-icon"><partial name="_PenIcon" model='"workflow"' /></span><div><h2 id="login-heading">Giriş yap</h2><p>Hesap bilgilerini gir.</p></div></header>
+        <form asp-controller="Account" asp-action="Login" method="post" novalidate>
+            <input asp-for="ReturnUrl" type="hidden" />
+            <div class="pen-form-fields">
+                @if (!ViewData.ModelState.IsValid) { <div class="pen-notice pen-notice-error" role="alert" tabindex="-1" data-validation-alert><partial name="_PenIcon" model='"alert"' /><div><strong>Giriş yapılamadı.</strong><div asp-validation-summary="All"></div></div></div> }
+                <div class="pen-field"><label asp-for="Email">E-posta</label><input asp-for="Email" type="email" autocomplete="email" required aria-describedby="login-email-error" aria-invalid="@(HasError("Email") ? "true" : "false")" /><span id="login-email-error" asp-validation-for="Email" class="pen-field-error"></span></div>
+                <div class="pen-field"><label asp-for="Password">Parola</label><input asp-for="Password" type="password" autocomplete="current-password" required aria-describedby="login-password-error" aria-invalid="@(HasError("Password") ? "true" : "false")" /><span id="login-password-error" asp-validation-for="Password" class="pen-field-error"></span></div>
+                <label class="pen-auth-remember"><input asp-for="RememberMe" /> Beni hatırla</label>
+            </div>
+            <div class="pen-form-actions"><a class="pen-button pen-secondary" asp-action="Register" asp-route-returnUrl="@Model.ReturnUrl">Hesap oluştur</a><button class="pen-button pen-primary" type="submit">Giriş yap</button></div>
+        </form>
+    </section>
+</div>

@@ -58,7 +58,7 @@ Check(!Valid(new TaskCreateViewModel { Title = "Valid", DueDate = new DateOnly(1
 Check(!Valid(new TaskFilterViewModel { Status = (Status)999 }), "Invalid filter rejected");
 using var db = new WorkFlowDbContext(new DbContextOptionsBuilder<WorkFlowDbContext>()
     .UseNpgsql("Host=localhost;Database=not_connected").Options);
-var service = new TaskService(db);
+var service = new TaskService(db, new TestCurrentUser("qa-offline-owner"));
 var sql = service.ListeSorgusu("50%_sale", Status.InProgress, Priority.Critical).ToQueryString();
 Check(sql.Contains("ILIKE") && sql.Contains(" OR ") && sql.Contains("Status") && sql.Contains("Priority") && sql.Contains("AND"), "Search and both filters translate together to PostgreSQL");
 Check(sql.Contains("ORDER BY") && sql.Contains("CreatedDate\" DESC"), "Newest-first SQL ordering");

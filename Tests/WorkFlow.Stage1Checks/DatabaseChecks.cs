@@ -13,6 +13,7 @@ internal static class DatabaseChecks
     {
         var connection = await TestDatabase.VerifiedConnection();
         WorkFlowDbContext Open() => new(new DbContextOptionsBuilder<WorkFlowDbContext>().UseNpgsql(connection.ConnectionString).Options);
+        await using var account = await TestAccount.Create(Open);
         var checkedCount = 0;
         void Check(bool condition, string message)
         {
@@ -22,7 +23,8 @@ internal static class DatabaseChecks
         }
         using var baselineDb = Open();
         var applied = (await baselineDb.Database.GetAppliedMigrationsAsync()).ToArray();
-        Check(applied.SequenceEqual(new[] { "20261104172505_InitialPostgres", "20261109075834_AddPersistentTaskCodes" }), "Expected two migrations applied");
+        Check(applied.Length == 3 && applied.SequenceEqual(baselineDb.Database.GetMigrations())
+            && applied.Take(2).SequenceEqual(new[] { "20261104172505_InitialPostgres", "20261109075834_AddPersistentTaskCodes" }), "Expected original two migrations plus Identity migration applied");
         var original = await baselineDb.Tasks.AsNoTracking().OrderBy(t => t.Id).ToListAsync();
         var originalJson = JsonSerializer.Serialize(original);
         var owned = new ConcurrentDictionary<Guid, byte>();
@@ -37,7 +39,7 @@ internal static class DatabaseChecks
         try
         {
             using var db = Open();
-            var service = new TaskService(db);
+            var service = new TaskService(db, account);
             var task = NewTask("CRUD");
             service.GorevEkle(task);
             Check(task.CodeNumber > 0 && task.Id != Guid.Empty, "Create assigns sequence code while retaining Guid");
@@ -53,7 +55,7 @@ internal static class DatabaseChecks
             }
             Check(service.TumGorevleriGetir(marker, Status.Todo, Priority.Critical).Count == 0, "Status filter excludes updated task");
             Check(service.TumGorevleriGetir(marker, Status.InProgress, Priority.Low).Count == 0, "Priority filter combines with status");
-            Check(service.OzetGetir().Total == original.Count + 1, "Summary remains independent from filtered results");
+            Check(service.OzetGetir().Total == 1, "Summary remains independent from filtered results within its owner scope");
             var deletedCode = task.CodeNumber;
             service.GorevSil(task.Id);
             Check(!await db.Tasks.AsNoTracking().AnyAsync(t => t.Id == task.Id), "Delete removes only the test task");
@@ -63,14 +65,14 @@ internal static class DatabaseChecks
                 using var concurrentDb = Open();
                 var item = NewTask("Concurrent " + i);
                 if (!barrier.SignalAndWait(TimeSpan.FromSeconds(30))) throw new InvalidOperationException("Concurrent start timed out");
-                new TaskService(concurrentDb).GorevEkle(item);
+                new TaskService(concurrentDb, account).GorevEkle(item);
                 return item;
             }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default)).ToArray();
             var created = await Task.WhenAll(jobs);
             Check(created.Select(t => t.CodeNumber).Distinct().Count() == 8 && created.All(t => t.CodeNumber > deletedCode), "Eight simultaneous inserts get distinct codes and never reuse deleted code");
             using (var read = Open())
             {
-                var result = new TaskService(read).TumGorevleriGetir(marker);
+                var result = new TaskService(read, account).TumGorevleriGetir(marker);
                 Check(result.Count == 8 && result.Select(t => t.Id).ToHashSet().SetEquals(created.Select(t => t.Id)), "All concurrent inserts persisted");
                 Check(result.Select(t => t.Id).SequenceEqual(result.OrderByDescending(t => t.CreatedDate).ThenBy(t => t.Id).Select(t => t.Id)), "PostgreSQL returns newest tasks first");
             }
@@ -88,11 +90,11 @@ internal static class DatabaseChecks
             }
             Check(rejected, "Database rejects duplicate CodeNumber with unique index");
             var latest = created.MaxBy(t => t.CodeNumber)!;
-            using (var delete = Open()) new TaskService(delete).GorevSil(latest.Id);
+            using (var delete = Open()) new TaskService(delete, account).GorevSil(latest.Id);
             using (var insert = Open())
             {
                 var replacement = NewTask("After delete");
-                new TaskService(insert).GorevEkle(replacement);
+                new TaskService(insert, account).GorevEkle(replacement);
                 Check(replacement.CodeNumber > latest.CodeNumber, "Deleting largest code does not recycle its number");
             }
         }

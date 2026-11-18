@@ -13,6 +13,14 @@ public class TaskItem
     public Priority Priority { get; set; }
     public DateTime CreatedDate { get; private set; }
     public DateTime? DueDate { get; set; }
+    public string? OwnerId { get; private set; }
+
+    public void AssignOwner(string ownerId)
+    {
+        if (string.IsNullOrWhiteSpace(ownerId)) throw new ArgumentException("Geçerli bir kullanıcı gereklidir.", nameof(ownerId));
+        if (OwnerId is not null && OwnerId != ownerId) throw new InvalidOperationException("Görev sahipliği değiştirilemez.");
+        OwnerId = ownerId;
+    }
 
     private TaskItem()
     {

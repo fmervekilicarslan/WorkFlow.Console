@@ -1,0 +1,22 @@
+@model RegisterViewModel
+@{
+    ViewData["Title"] = "Hesap oluştur";
+    ViewData["PenPage"] = "account";
+    bool HasError(string field) => ViewData.ModelState[field]?.Errors.Count > 0;
+}
+<div class="pen-auth">
+    <div class="pen-heading"><div><h1>Birlikte başlayalım.</h1><p>Görevlerini düzenlemek için hesabını oluştur.</p></div></div>
+    <section class="pen-form-card" aria-labelledby="register-heading">
+        <header><span class="pen-form-icon"><partial name="_PenIcon" model='"workflow"' /></span><div><h2 id="register-heading">Hesap oluştur</h2><p>Hesap bilgilerini gir.</p></div></header>
+        <form asp-controller="Account" asp-action="Register" method="post" novalidate>
+            <input asp-for="ReturnUrl" type="hidden" />
+            <div class="pen-form-fields">
+                @if (!ViewData.ModelState.IsValid) { <div class="pen-notice pen-notice-error" role="alert" tabindex="-1" data-validation-alert><partial name="_PenIcon" model='"alert"' /><div><strong>Hesap oluşturulamadı.</strong><div asp-validation-summary="All"></div></div></div> }
+                <div class="pen-field"><label asp-for="Email">E-posta</label><input asp-for="Email" type="email" autocomplete="email" required aria-describedby="register-email-error" aria-invalid="@(HasError("Email") ? "true" : "false")" /><span id="register-email-error" asp-validation-for="Email" class="pen-field-error"></span></div>
+                <div class="pen-field"><label asp-for="Password">Parola</label><input asp-for="Password" type="password" autocomplete="new-password" required aria-describedby="register-password-error" aria-invalid="@(HasError("Password") ? "true" : "false")" /><span id="register-password-error" asp-validation-for="Password" class="pen-field-error"></span></div>
+                <div class="pen-field"><label asp-for="ConfirmPassword">Parola tekrarı</label><input asp-for="ConfirmPassword" type="password" autocomplete="new-password" required aria-describedby="register-confirm-error" aria-invalid="@(HasError("ConfirmPassword") ? "true" : "false")" /><span id="register-confirm-error" asp-validation-for="ConfirmPassword" class="pen-field-error"></span></div>
+            </div>
+            <div class="pen-form-actions"><a class="pen-button pen-secondary" asp-action="Login" asp-route-returnUrl="@Model.ReturnUrl">Giriş yap</a><button class="pen-button pen-primary" type="submit">Hesap oluştur</button></div>
+        </form>
+    </section>
+</div>

@@ -10,15 +10,27 @@ namespace WorkFlow.Mvc.Services;
 public class TaskService : ITaskService
 {
     private readonly WorkFlowDbContext _dbContext;
+    private readonly ICurrentUser? _currentUser;
 
-    public TaskService(WorkFlowDbContext dbContext)
+    public TaskService(WorkFlowDbContext dbContext, ICurrentUser? currentUser = null)
     {
         _dbContext = dbContext;
+        _currentUser = currentUser;
+    }
+
+    private IQueryable<TaskItem> OwnedTasks(bool tracking = false)
+    {
+        var userId = _currentUser?.UserId;
+        var query = tracking ? _dbContext.Tasks : _dbContext.Tasks.AsNoTracking();
+        return query.Where(task => userId != null && task.OwnerId == userId);
     }
 
     public void GorevEkle(TaskItem yeniGorev)
     {
         AlanlariDogrula(yeniGorev.Title, yeniGorev.Description, yeniGorev.Priority, yeniGorev.Status, yeniGorev.DueDate);
+        var userId = _currentUser?.UserId;
+        if (string.IsNullOrWhiteSpace(userId)) throw new UnauthorizedAccessException("Oturum açmanız gerekiyor.");
+        yeniGorev.AssignOwner(userId);
         yeniGorev.Title = yeniGorev.Title.Trim();
         yeniGorev.Description = yeniGorev.Description?.Trim() ?? string.Empty;
         _dbContext.Tasks.Add(yeniGorev);
@@ -42,12 +54,12 @@ public class TaskService : ITaskService
             throw new GecersizGorevException("1900 ile 9998 yılları arasında bir tarih seçin.");
     }
 
-    public TaskItem? GorevGetir(Guid id) => _dbContext.Tasks.AsNoTracking().SingleOrDefault(task => task.Id == id);
+    public TaskItem? GorevGetir(Guid id) => OwnedTasks().SingleOrDefault(task => task.Id == id);
 
     public bool GorevGuncelle(Guid id, string title, string? description, Priority priority, Status status, DateTime? dueDate)
     {
         AlanlariDogrula(title, description, priority, status, dueDate);
-        var task = _dbContext.Tasks.Find(id);
+        var task = OwnedTasks(true).SingleOrDefault(task => task.Id == id);
         if (task is null) return false;
         task.Title = title.Trim();
         task.Description = description?.Trim() ?? string.Empty;
@@ -83,7 +95,7 @@ public class TaskService : ITaskService
 
     public void GorevSil(Guid gorevId)
     {
-        TaskItem? gorev = _dbContext.Tasks.Find(gorevId);
+        TaskItem? gorev = OwnedTasks(true).SingleOrDefault(task => task.Id == gorevId);
         if (gorev is null)
         {
             throw new GecersizGorevException("Silinecek görev bulunamadı.");
@@ -100,7 +112,7 @@ public class TaskService : ITaskService
             throw new GecersizGorevException("Geçersiz görev durumu.");
         }
 
-        TaskItem? gorev = _dbContext.Tasks.Find(gorevId);
+        TaskItem? gorev = OwnedTasks(true).SingleOrDefault(task => task.Id == gorevId);
         if (gorev is null)
         {
             throw new GecersizGorevException("Güncellenecek görev bulunamadı.");
@@ -117,7 +129,7 @@ public class TaskService : ITaskService
 
     public IQueryable<TaskItem> ListeSorgusu(string? search = null, Status? status = null, Priority? priority = null)
     {
-        var query = _dbContext.Tasks.AsNoTracking();
+        var query = OwnedTasks();
         if (!string.IsNullOrWhiteSpace(search))
         {
             var pattern = "%" + search.Trim().Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";
@@ -167,7 +179,7 @@ public class TaskService : ITaskService
             throw new GecersizGorevException("Takvim filtrelerini kontrol edin.");
     }
 
-    public TaskSummary OzetGetir() => _dbContext.Tasks.AsNoTracking().GroupBy(task => 1)
+    public TaskSummary OzetGetir() => OwnedTasks().GroupBy(task => 1)
         .Select(group => new TaskSummary
         {
             Total = group.Count(),

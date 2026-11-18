@@ -3,9 +3,12 @@
 Proje kökünde önce Release derlemesini ve bağlantısız kontrolleri çalıştırın:
 
 ```powershell
+dotnet restore Tests/WorkFlow.Stage1Checks/WorkFlow.Stage1Checks.csproj
 dotnet build Tests/WorkFlow.Stage1Checks/WorkFlow.Stage1Checks.csproj -c Release --no-restore
 dotnet Tests/WorkFlow.Stage1Checks/bin/Release/net10.0/WorkFlow.Stage1Checks.dll
 ```
+
+Identity bağımlılıkları eklendiğinde test projesinin transitive paket grafiği de yenilenmelidir. Bu nedenle yeni checkout veya paket değişikliğinden sonra `--no-restore` derlemesinden önce yukarıdaki restore adımını çalıştırın.
 
 Parametresiz çalıştırma: 23 mevcut kontrol, 14 bağlantı güvenliği ve 31 takvim tarih/koruma kontrolü; toplam 68 kontrol veritabanına bağlanmaz.
 
@@ -115,4 +118,40 @@ Son tam koşu **577/577 başarılıdır**: 68 bağlantısız + 16 PostgreSQL + 4
 
 Yeni kontroller iki temada 1440/768/390/320 px genişliklerde kompakt footer yerleşimini, native durum seçicisinin 44 px dokunma alanını, başlık alanının korunmasını, ay dışı tarihlerin en az 4,5:1 kontrastını, görevlerin soluklaştırılmamasını ve boş hücre yüksekliğini doğrular. Ay dışı güne tıklayarak doğru Gün görünümüne ve o gündeki görevden Details sayfasına erişim ayrıca kontrol edilir. Mevcut durum kalıcılığı, CSRF, drag/drop, hata geri alma, klavye, dokunma emülasyonu, sütun kaydırması, UTC sınırları, tarih alanı, +N ve erişilebilir ad kontrolleri geçti.
 
-UI/UX ajanı ürün düzenlemelerini, QA ajanı testleri hazırladı. Ana ajan tek seri test koşusunu yürütüp logları denetledi; QA ajanının son bağımsız log denetimi kullanım sınırı nedeniyle tamamlanamadı. Fiziksel cihaz ve ekran görüntüsüyle görsel onay yapılmadı. Yalnız mevcut izole veritabanı ExistingOnly ile kullanıldı; migration/provisioning yapılmadı. Özgün görevler/kodlar, migration geçmişi ve canlı workflow_db salt okunur fingerprint'i değişmedi. Loglar Git dışında .local-checkpoints/ui-refinements-v2-{build,offline,isolated}.log dosyalarındadır.
+UI/UX ajanı ürün düzenlemelerini, QA ajanı testleri hazırladı. Ana ajan tek seri test koşusunu yürütüp logları denetledi; QA ajanı sonraki oturumda logları ayrıca inceleyerek 577 sayımını, sıfır başarısızlığı ve veri koruma kanıtlarını doğruladı. Fiziksel cihaz ve ekran görüntüsüyle görsel onay yapılmadı. Yalnız mevcut izole veritabanı ExistingOnly ile kullanıldı; migration/provisioning yapılmadı. Özgün görevler/kodlar, migration geçmişi ve canlı workflow_db salt okunur fingerprint'i değişmedi. Loglar Git dışında .local-checkpoints/ui-refinements-v2-{build,offline,isolated}.log dosyalarındadır.
+
+## Identity ve kullanıcı sahipliği kontrolleri
+
+Son tam koşu **705/705 başarılıdır**: 68 bağlantısız + 16 PostgreSQL + 621 Stage2. Önceki 577 kontrol, gerçek kullanıcı sahipliği ve kimliği doğrulanmış HTTPS oturumuyla uyarlanarak korundu; 102 Identity HTTP/güvenlik ve 26 Identity Chrome kontrolü eklendi. Kanban/Liste Chrome 93, Takvim Chrome 128 kontrol olarak devam eder. Release uygulama ve test derlemesi sıfır hata/uyarıyla geçti; son logda başarısız kontrol yoktur. Tarayıcı seçeneği kapalıyken toplam 458 kontroldür.
+
+Ayrıca ilk açık izinli izole migration koşusunda **12/12 koruma kontrolü** geçti. Bu ayrı kanıt, 705 kontrolün parçası değildir; tek bir 717 kontrollük koşu yapılmış gibi raporlanmamalıdır. `20261118130842_AddIdentityAndTaskOwnership` migration'ından önce EF'nin yeni OwnerId sütununa erişmesi beklenmeden Npgsql ile eski alanların snapshot'ı alındı. Tüm eski görev alanları, Guid/kod/tarihler ve sequence migration boyunca aynı kaldı. Yalnız koşunun eklediği legacy fixture sahipsiz kaldı; iki gerçek kullanıcının Liste/Pano/Takvim ve doğrudan Details isteklerinden görünmedi. Fixture temizliğinden sonra bütün özgün görev alanları yeniden aynıydı.
+
+Güncel hazırlık ve normal tekrar komutları:
+
+```powershell
+dotnet restore Tests/WorkFlow.Stage1Checks/WorkFlow.Stage1Checks.csproj
+dotnet build Tests/WorkFlow.Stage1Checks/WorkFlow.Stage1Checks.csproj -c Release --no-restore
+dotnet Tests/WorkFlow.Stage1Checks/bin/Release/net10.0/WorkFlow.Stage1Checks.dll
+$env:WORKFLOW_BROWSER_CHECKS = '1'
+.\Tests\Run-IsolatedChecks.ps1 -ExistingOnly
+```
+
+Yeni migration için kullanıcı açıkça yetki verdiyse, yalnız hazır izole test veritabanında ilk koşu şu komutla yapılabilir:
+
+```powershell
+.\Tests\Run-IsolatedChecks.ps1 -ExistingOnly -ApplyAuthorizedTestMigrations
+```
+
+Bu bayrak `-ExistingOnly` olmadan veya odaklı takvim moduyla reddedilir. Mevcut DPAPI test bağlantısı, bağlı test veritabanı/rol kimliği ve canlı nesnelere yetkisizlik denetlendikten sonra prepare modu çalışır. Normal `-ExistingOnly` migration uygulamaz. Canlı `workflow_db` için migration, veri yazma veya otomatik sahip atama yapılmadı; test veritabanı/rol oluşturulmadı veya silinmedi. Eski bölümlerdeki kaynak oluşturma komutları tarihsel altyapıyı anlatır; bu çalışmada yalnız hazır izole kaynaklar kullanıldı.
+
+Kapsam:
+
+- Anonim Liste/Pano/Takvim/CRUD ve çıkış istekleri aynı origin'deki giriş sayfasına yönlendirilir; mutlak HTTPS yönlendirmesinde de şema/host/port ve `/Account/Login` yolu doğrulanır. Eksik kullanıcı bağlamında servis hiçbir görevi, sahipsiz kayıtları veya özetini açmaz; oluşturmayı reddeder.
+- Gerçek kayıt/giriş, yerel dönüş adresi, dış veya ters bölü işaretli dönüşlerin reddi, genel giriş/tekrar kayıt hataları, parola geri yazılmaması, Identity V3 PBKDF2 hash'inde en az 210000 iterasyon, beş başarısız denemede 15 dakikalık kilit ve aktif kilidin doğru parolayla aşılamaması denetlenir.
+- Cookie'nin Secure/HttpOnly/SameSite=Lax bayrakları, kayıt oturum cookie'si, hatırlanan girişin 30 dakikalık sınırı, bozulmuş ticket'ın reddi, POST çıkış ve hesap/görev endpoint'lerinde CSRF koruması doğrulanır.
+- İki gerçek kullanıcı ve sahipsiz görevle Liste/Pano/Takvim'in üç görünümü, özet, Details/Edit GET, Edit/Delete/UpdateStatus/UpdateBoardStatus POST için sahiplik izolasyonu doğrulanır. Başkasının/sahipsiz görevin kimliği 404 alır; reddedilen yazmalarda bütün görevlerin snapshot'ı aynı kalır. Sahiplik/kod alanı sahteciliği ve başka kullanıcıdan alınmış antiforgery token'ı görev aktarımı veya değişiklik yapamaz.
+- Hesap Chrome kontrolleri iki temada 1440/768/390/320 px formları, autocomplete ve hata ilişkilerini, boş parolaları, hata odağını, güvenli dönüş değerini, kullanıcı adını ve mobil JavaScript kapalı gerçek POST çıkışı denetler. Önceki Kanban/Takvim klavye, CDP dokunma, rollback, yedi sütun, +N, AX ve UTC kontrolleri korunur.
+
+QA sunucusu yalnız loopback HTTPS üzerinden çalışır. Geçici sertifika HttpClient'ta tam sertifika SHA-256 piniyle, ayrı Chrome profilinde yalnız o anahtarın SPKI piniyle kabul edilir; genel sertifika doğrulaması veya üretim cookie politikası gevşetilmez. Browser oturumu gerçek girişten alınır; uygulamada test auth bypass'ı yoktur. Bağlantı/parola/cookie çıktıya veya commit'e yazılmaz; şifreli geçici PFX ve tanı logları Git dışındadır. Fiziksel ekran okuyucu/cihaz, ekran görüntüsüyle görsel onay, gerçek SMTP/e-posta doğrulaması ve üretim migration/dağıtımı bu testlerin kanıtı değildir.
+
+Ana ajan tek seri QA komut yürütücüsüydü; QA ajanı kaynak testlerini hazırladı ve son logları bağımsız denetledi. Tüm özgün görevler/kodlar ve Identity kullanıcıları temizleme sonrasında aynı kaldı; migration geçmişi son tam koşu boyunca değişmedi. Canlı görev/migration/sequence/sahiplik/izin fingerprint'i aynıydı. Yalnız QA fixture'ları temizlendi ve QA HTTPS/Chrome süreçleri kapatıldı. Son loglar Git dışında `.local-checkpoints/authentication-final-{build,offline,isolated}.log`; ayrı migration kanıtı `.local-checkpoints/authentication-isolated.log` dosyasındadır.

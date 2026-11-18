@@ -60,6 +60,18 @@ Takvim tarih alanı **GG.AA.YYYY** biçimindedir (örneğin `18.11.2026`). Nativ
 
 Tarih aralıkları İstanbul yerel günlerinden mevcut `TaskDates` dönüşümleriyle UTC'ye çevrilir. Veritabanı sorgusu başlangıç dahil, bitiş hariç aralık kullanır; kayıtların UTC teslim tarihleri doğru yerel güne gruplanır. Seçili tarihler mevcut form sınırlarıyla uyumlu olarak 1900–9998 yılları arasındadır. Takvim V1 yalnız okur; takvimden sürükleyerek teslim tarihi değiştirme içermez ve yeni migration gerektirmez.
 
+## Kullanıcı hesabı ve görev sahipliği
+
+ASP.NET Core Identity ile `/Account/Register` üzerinden kayıt, `/Account/Login` üzerinden giriş ve CSRF korumalı POST formuyla çıkış kullanılır. Parolalar Identity'nin yerleşik hash mekanizmasıyla saklanır; en az 12 karakter, büyük/küçük harf, rakam ve özel karakter gerekir. Beş başarısız deneme hesabı 15 dakika kilitler. Giriş hata mesajı hesap bulunup bulunmadığını açıklamaz.
+
+Kimlik doğrulama cookie'si Secure, HttpOnly ve SameSite=Lax kullanır; oturum süresi 30 dakikadır ve otomatik kaydırılmaz. Güvenlik damgası beş dakikada bir doğrulanır. Giriş/kayıt dahil MVC işlemleri HTTPS gerektirir. Yerel denemede uygun geliştirme sertifikasıyla `dotnet run --urls https://localhost:5001` kullanılabilir; sertifika güveni yerel ortamda ayrıca hazırlanmalıdır. Üretimde geçerli HTTPS ve kalıcı Data Protection anahtar yönetimi gerekir.
+
+Görev listesi, özet, CRUD, Kanban ve Takvim sunucuda kullanıcı kimliğiyle sınırlandırılır. Başka kullanıcıya ait görev kimliği bilinmesi erişim sağlamaz. Eski görevlerin sahibi otomatik atanmaz; sahipsiz görevler yeni hesaplara gösterilmez. `Project` bu aşamada yalnız ekran adıdır.
+
+**Canlı `workflow_db` için Identity migration'ı bu geliştirme sırasında uygulanmaz.** Yeni sürüm kullanılmadan önce şema değişikliği ve eski görevlerin sahipliği için [geçiş planı](Docs/AuthenticationRollout.md) incelenip ayrı onay verilmelidir. Uygulama başlangıcında otomatik migration yoktur. İlk doğrulama yalnız izole test ortamında yapılır.
+
+Bu aşamada e-posta gönderimi/doğrulaması, parola sıfırlama ve çok faktörlü kimlik doğrulama ekranları yoktur; kayıt sonrası oturum açılır. Üretime çıkış politikası belirlenirken bu kapsam dikkate alınmalıdır.
+
 ## Proje Mimarisi
 
 Uygulama, ASP.NET Core MVC mimarisine uygun olarak katmanlara ayrılmıştır.

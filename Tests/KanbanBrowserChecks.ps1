@@ -1,13 +1,13 @@
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$BaseUrl, [Parameter(Mandatory)][Guid]$TaskId)
 $ErrorActionPreference = 'Stop'
-if ($BaseUrl -notmatch '^http://127\.0\.0\.1:\d+$') { throw 'An isolated local test server is required.' }
+if ($BaseUrl -notmatch '^https://127\.0\.0\.1:\d+$' -or $env:WORKFLOW_BROWSER_CERT_SPKI -notmatch '^[A-Za-z0-9+/]{43}=$' -or [string]::IsNullOrWhiteSpace($env:WORKFLOW_BROWSER_COOKIE)) { throw 'A pinned isolated HTTPS server and real authenticated test cookie are required.' }
 $chromePath = 'C:\Program Files\Google\Chrome\Application\chrome.exe'
 if (-not (Test-Path -LiteralPath $chromePath)) { throw 'Chrome is required for optional browser checks.' }
 $probe = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
 $probe.Start(); $debugPort = $probe.LocalEndpoint.Port; $probe.Stop()
 $profile = Join-Path ([IO.Path]::GetTempPath()) ('workflow-kanban-' + [Guid]::NewGuid().ToString('N'))
-$chrome = Start-Process $chromePath -WindowStyle Hidden -PassThru -ArgumentList @('--headless=new', '--remote-debugging-address=127.0.0.1', "--remote-debugging-port=$debugPort", "--user-data-dir=$profile", '--no-first-run', '--no-default-browser-check', 'about:blank')
+$chrome = Start-Process $chromePath -WindowStyle Hidden -PassThru -ArgumentList @('--headless=new', "--ignore-certificate-errors-spki-list=$env:WORKFLOW_BROWSER_CERT_SPKI", '--remote-debugging-address=127.0.0.1', "--remote-debugging-port=$debugPort", "--user-data-dir=$profile", '--no-first-run', '--no-default-browser-check', 'about:blank')
 $socket = [Net.WebSockets.ClientWebSocket]::new()
 $script:messageId = 0
 $script:passed = 0
@@ -57,6 +57,9 @@ try {
     $page=$targets | Where-Object type -eq 'page' | Select-Object -First 1
     $socket.ConnectAsync([Uri]$page.webSocketDebuggerUrl,[Threading.CancellationToken]::None).GetAwaiter().GetResult() | Out-Null
     Cdp 'Page.enable' @{} | Out-Null
+    Cdp 'Network.enable' @{} | Out-Null
+    $cookieResult = Cdp 'Network.setCookie' @{name='.WorkFlow.Identity';value=$env:WORKFLOW_BROWSER_COOKIE;url=$BaseUrl;secure=$true;httpOnly=$true;sameSite='Lax'}
+    if (-not $cookieResult.success) { throw 'Authenticated HTTPS browser cookie was rejected.' }
     OpenPage '/Tasks?view=list&Filter.PageSize=50'
     $listIds = Eval 'JSON.stringify([...document.querySelectorAll("[data-list-task]")].map(e=>e.dataset.listTask).sort())'
     ClickView 'board'

@@ -460,3 +460,16 @@ html[data-theme="dark"] .pen-app .pen-calendar-token.priority-critical { --calen
 html[data-theme="dark"] .pen-app .pen-calendar-token.priority-high { --calendar-priority-dot: #ffcfaa; color: #f3f5fa; background: #44352f; }
 html[data-theme="dark"] .pen-app .pen-calendar-token.priority-normal { --calendar-priority-dot: #f6dd9a; color: #f3f5fa; background: #413d31; }
 html[data-theme="dark"] .pen-app .pen-calendar-token.priority-low { --calendar-priority-dot: #c4dcff; color: #f3f5fa; background: #293b50; }
+
+/* Hesap ekranları ortak form ve tema dilini kullanır. */
+.pen-auth { max-width: 520px; margin: 0 auto; }
+.pen-auth-remember { display: flex; align-items: center; gap: 8px; color: var(--pen-text); font-size: 13px; }
+.pen-auth-remember input { width: 18px; height: 18px; }
+.pen-account-actions { display: flex; align-items: center; gap: 12px; min-width: 0; font-size: 12px; }
+.pen-account-name { max-width: 180px; overflow-wrap: anywhere; color: var(--pen-text); font-size: 12px; }
+.pen-account-link { border: 0; padding: 8px; border-radius: 6px; background: transparent; color: var(--pen-purple); font: inherit; cursor: pointer; }
+.pen-account-link:hover { text-decoration: underline; }
+.pen-mobile-header nav .pen-account-name { padding: 8px 10px; }
+.pen-mobile-header nav .pen-account-link { min-height: 44px; padding: 10px; text-align: left; }
+html[data-theme="dark"] .pen-app .pen-account-link { color: #c3bdff; }
+@media (max-width: 760px) { .pen-auth { max-width: 100%; } }

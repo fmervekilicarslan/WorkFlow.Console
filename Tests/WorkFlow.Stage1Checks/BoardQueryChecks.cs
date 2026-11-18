@@ -73,7 +73,7 @@ internal static class BoardQueryChecks
             var commands = new QueryCounter();
             using var db = new WorkFlowDbContext(new DbContextOptionsBuilder<WorkFlowDbContext>()
                 .UseNpgsql(connectionString).AddInterceptors(commands).Options);
-            var controller = new TasksController(new TaskService(db), new Project("QA"));
+            var controller = new TasksController(new TaskService(db, new TestCurrentUser(target.OwnerId)), new Project("QA"));
             var result = (ViewResult)controller.Index(new TaskFilterViewModel { Search = marker }, view);
             var model = (TaskListViewModel)result.Model!;
             Check(commands.Sql.Count == (view == "board" ? 2 : 3), view + " executes expected SQL command count");

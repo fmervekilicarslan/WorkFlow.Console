@@ -1,14 +1,16 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using WorkFlow.Mvc.Models;
 
 namespace WorkFlow.Mvc.Data;
 
-public class WorkFlowDbContext(DbContextOptions<WorkFlowDbContext> options) : DbContext(options)
+public class WorkFlowDbContext(DbContextOptions<WorkFlowDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
         modelBuilder.HasSequence<long>("TaskCodeSequence").StartsAt(1).IncrementsBy(1);
         modelBuilder.Entity<TaskItem>(task =>
         {
@@ -23,6 +25,8 @@ public class WorkFlowDbContext(DbContextOptions<WorkFlowDbContext> options) : Db
             task.Property(item => item.Status).HasConversion<int>().IsRequired();
             task.Property(item => item.CreatedDate).HasColumnType("timestamp with time zone").IsRequired();
             task.Property(item => item.DueDate).HasColumnType("timestamp with time zone");
+            task.HasOne<ApplicationUser>().WithMany().HasForeignKey(item => item.OwnerId).OnDelete(DeleteBehavior.Restrict);
+            task.HasIndex(item => item.OwnerId);
         });
     }
 }
