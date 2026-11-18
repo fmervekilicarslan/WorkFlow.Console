@@ -42,13 +42,15 @@ Kartı başka sütuna sürükleyebilir veya karttaki durum alanını kullanabili
 
 Liste, Pano ve Takvim araç çubukları ortak kontrol ölçüleri ve daha sıkı boşluklar kullanır. Kanban kartları görev kodunu, başlığı, önceliği ve teslim tarihini koruyan kompakt düzendedir; başlık görev detayını açar. Durum seçicisi daha dar, klavyeyle kullanılabilir ve dokunma için en az 44 piksel yüksekliğindedir. Masaüstünde her sütunun görev alanı bağımsız kaydırılırken başlığı görünür kalır; bu alanlara Tab ile odaklanabilirsiniz. Mobilde sütunlar alt alta ve sayfayla birlikte kayar. Açık/koyu tema, filtre adresleri ve görünüm tercihleri korunur.
 
-## Görev Takvimi V1.1
+## Görev Takvimi V1.2
 
 Menüdeki **Takvim** bağlantısı `/Calendar` sayfasını açar. Varsayılan görünüm **Ay**dır; **Gün / Hafta / Ay** bağlantıları, **Önceki / Bugün / Sonraki** kontrolleriyle tarih aralığını değiştirebilirsiniz. Görünüm tercihi tarayıcıda saklanır; URL'deki açık `view=day|week|month` seçimi önceliklidir. Arama, durum ve öncelik filtreleri tarih ve görünüm bağlamını korur.
 
 Haftalar pazartesi başlar. Ay ızgarasındaki yoğun günlerde ilk üç görev gösterilir; kalanlar klavyeyle de açılabilen **+N görev** genişletme alanındadır. Görev kartları mevcut detay sayfasına gider. Teslim tarihi olmayan görevler ayrı bölümde, sayfalı olarak gösterilir; takvim günlerine yerleştirilmez. Bugün ve tamamlanmamış gecikmiş/yaklaşan görevler vurgulanır; tamamlananlar gecikmiş sayılmaz.
 
-Ay görünümünde görevler tek satırlık kompakt etiketlerle gösterilir; uzun başlıklar üç noktayla kısalır. Tam başlık klavye odağında ve işaretçiyle erişilebilir açıklamada okunabilir. Durum ve öncelik renk yanında simgelerle belirtilir. Yoğun günlerin genişletilmiş görev alanı kaydırılabilir; boş günlerde yalnız gün başlığı gösterilir. Gün başlığı ilgili Gün görünümünü, görev etiketi Details sayfasını açar. Hafta ve Gün görünümleri ayrıntılı kartları korur.
+Ay görünümünde Pzt–Paz hafta başlıkları yedi sütunla hizalanır; gün hücrelerinde yalnız gün numarası gösterilir. Dar ekranda hafta düzeni korunur ve yalnız takvim alanı yatay kaydırılır. Önceki/sonraki ayın günleri daha soluk, bugünün numarası mor yuvarlak alanla belirtilir.
+
+Görevler küçük öncelik işareti, görev kodu ve tek satırlık başlıkla gösterilir; uzun başlıklar üç noktayla kısalır. Tam başlık, öncelik ve durum klavye odağında, erişilebilir adda ve tooltip'te bulunur. Dört öncelik hafif renk tonlarıyla ayrılır; durum yalnız renkle anlatılmaz. Yoğun günlerin **+N görev** alanı kaydırılabilir; boş günlerde yalnız gün numarası gösterilir. Gün numarası ilgili Gün görünümünü, görev etiketi Details sayfasını açar. Hafta ve Gün görünümleri ayrıntılı kartları korur.
 
 Takvim tarih alanı **GG.AA.YYYY** biçimindedir (örneğin `18.11.2026`). Native tarih alanının tarayıcı diline bağlı gösterimi yerine açıklamalı metin alanı ve sunucuda kesin biçim doğrulaması kullanılır; JavaScript kapalıyken de çalışır. Mevcut `yyyy-MM-dd` URL bağlantıları desteklenmeye devam eder. Tarih, arama, durum ve öncelik alanları dar ekranlara uyarlanan kompakt araç çubuğundadır.
 

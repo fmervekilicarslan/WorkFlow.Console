@@ -395,7 +395,7 @@ html[data-theme="dark"] .pen-app .pen-board-message[data-error="true"] { backgro
 .pen-calendar-grid.is-month .pen-calendar-day { padding: 8px; }
 .pen-calendar-grid.is-month .pen-calendar-day h3 { margin-bottom: 5px; }
 .pen-calendar-token { position: relative; display: flex; align-items: center; gap: 4px; min-width: 0; margin-top: 4px; padding: 4px 6px; border-radius: 5px; font-size: 11px; line-height: 16px; }
-.pen-calendar-token-symbol { flex: 0 0 auto; font-weight: 700; }
+.pen-calendar-token-dot { flex: 0 0 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--calendar-priority-dot); }
 .pen-calendar-token-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pen-calendar-token:hover .pen-calendar-token-text { text-decoration: underline; }
 .pen-calendar-token-full { display: none; }
@@ -429,3 +429,26 @@ html[data-theme="dark"] .pen-app .pen-calendar-today { background: #454173; colo
     .pen-calendar-navigation { width: 100%; }
     .pen-calendar-field input, .pen-calendar-field select { height: 44px; }
 }
+/* Ay görünümünde başlık ve günler aynı yedi sütunu paylaşır. */
+.pen-calendar-month-scroll { min-width: 0; overflow-x: auto; padding: 3px; }
+.pen-calendar-month-scroll:focus-visible { outline: 2px solid var(--pen-purple); outline-offset: -2px; }
+.pen-calendar-grid.is-month { min-width: 770px; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.pen-calendar-weekday { padding: 4px 8px; color: var(--pen-text); font-size: 11px; font-weight: 600; }
+.pen-calendar-grid.is-month .pen-calendar-day.is-outside { background: #eff1f7; }
+.pen-calendar-grid.is-month .pen-calendar-day.is-outside h3 a { color: #606b80; }
+.pen-calendar-grid.is-month .pen-calendar-day.is-today { border-color: var(--pen-line); }
+.pen-calendar-grid.is-month .pen-calendar-day h3 a[aria-current="date"] { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #594bd5; color: #fff; }
+.pen-calendar-grid.is-month .pen-calendar-day h3 a:focus-visible { outline: 2px solid #594bd5; outline-offset: 2px; }
+.pen-app .pen-calendar-token.priority-critical { --calendar-priority-dot: #c34455; color: #26324c; background: #fff5f6; }
+.pen-app .pen-calendar-token.priority-high { --calendar-priority-dot: #be6a21; color: #26324c; background: #fff7ef; }
+.pen-app .pen-calendar-token.priority-normal { --calendar-priority-dot: #9a7a1f; color: #26324c; background: #fbf8ec; }
+.pen-app .pen-calendar-token.priority-low { --calendar-priority-dot: #5274a1; color: #26324c; background: #f1f6fd; }
+html[data-theme="dark"] .pen-app .pen-calendar-grid.is-month .pen-calendar-day.is-outside { background: #202e41; }
+html[data-theme="dark"] .pen-app .pen-calendar-grid.is-month .pen-calendar-day.is-outside h3 a { color: #c1ccda; }
+html[data-theme="dark"] .pen-app .pen-calendar-grid.is-month .pen-calendar-day.is-today { border-color: var(--pen-line); }
+html[data-theme="dark"] .pen-app .pen-calendar-grid.is-month .pen-calendar-day h3 a[aria-current="date"] { background: #8c80ff; color: #17132e; }
+html[data-theme="dark"] .pen-app .pen-calendar-grid.is-month .pen-calendar-day h3 a:focus-visible { outline-color: #c3bdff; }
+html[data-theme="dark"] .pen-app .pen-calendar-token.priority-critical { --calendar-priority-dot: #ffb1bd; color: #f3f5fa; background: #472d3a; }
+html[data-theme="dark"] .pen-app .pen-calendar-token.priority-high { --calendar-priority-dot: #ffcfaa; color: #f3f5fa; background: #44352f; }
+html[data-theme="dark"] .pen-app .pen-calendar-token.priority-normal { --calendar-priority-dot: #f6dd9a; color: #f3f5fa; background: #413d31; }
+html[data-theme="dark"] .pen-app .pen-calendar-token.priority-low { --calendar-priority-dot: #c4dcff; color: #f3f5fa; background: #293b50; }

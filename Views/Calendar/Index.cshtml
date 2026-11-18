@@ -43,15 +43,21 @@
     </form>
     <div class="pen-calendar-heading"><h2>@heading</h2>@if (Model.ViewMode != "month") { <p>@(Model.ViewMode == "week" ? "Hafta görünümü · pazartesiden pazara" : "Gün görünümü")</p> }</div>
     @if (!Model.Days.Any(day => day.Tasks.Count > 0)) { <p class="pen-calendar-empty">Bu dönemde filtrelere uyan tarihli görev yok.</p> }
+    <div class="@(Model.ViewMode == "month" ? "pen-calendar-month-scroll" : null)" role="@(Model.ViewMode == "month" ? "region" : null)" aria-label="@(Model.ViewMode == "month" ? "Ay takvimi, yatay kaydırılabilir" : null)" tabindex="@(Model.ViewMode == "month" ? "0" : null)">
     <div class="pen-calendar-grid @(Model.ViewMode == "day" ? "is-day" : "") @(Model.ViewMode == "month" ? "is-month" : "")" data-calendar-grid>
+        @if (Model.ViewMode == "month")
+        {
+            @foreach (var weekday in new[] { (Short: "Pzt", Full: "Pazartesi"), (Short: "Sal", Full: "Salı"), (Short: "Çar", Full: "Çarşamba"), (Short: "Per", Full: "Perşembe"), (Short: "Cum", Full: "Cuma"), (Short: "Cmt", Full: "Cumartesi"), (Short: "Paz", Full: "Pazar") })
+            { <span class="pen-calendar-weekday" aria-label="@weekday.Full" title="@weekday.Full">@weekday.Short</span> }
+        }
         @foreach (var day in Model.Days)
         {
             var supported = day.Date.Year >= 1900 && day.Date.Year <= 9998;
             <section class="pen-calendar-day @(day.Date == Model.Today ? "is-today" : "") @(Model.ViewMode == "month" && day.Date.Month != Model.SelectedDate.Month ? "is-outside" : "")" data-calendar-day="@Iso(day.Date)" aria-label="@day.Date.ToString("d MMMM yyyy, dddd", tr)">
                 <h3>
-                    @if (supported) { <a href="@CalendarUrl("day", day.Date, Model.Filter.UndatedPage)">@day.Date.ToString("d MMM ddd", tr)</a> }
-                    else { <span>@day.Date.ToString("d MMM ddd", tr)</span> }
-                    @if (day.Date == Model.Today) { <span class="pen-calendar-today">Bugün</span> }
+                    @if (supported) { <a href="@CalendarUrl("day", day.Date, Model.Filter.UndatedPage)" aria-label="@(Model.ViewMode == "month" ? day.Date.ToString("d MMMM yyyy, dddd", tr) + (day.Date == Model.Today ? ", bugün" : "") : null)" aria-current="@(Model.ViewMode == "month" && day.Date == Model.Today ? "date" : null)">@(Model.ViewMode == "month" ? day.Date.Day.ToString(CultureInfo.InvariantCulture) : day.Date.ToString("d MMM ddd", tr))</a> }
+                    else { <span>@(Model.ViewMode == "month" ? day.Date.Day.ToString(CultureInfo.InvariantCulture) : day.Date.ToString("d MMM ddd", tr))</span> }
+                    @if (Model.ViewMode != "month" && day.Date == Model.Today) { <span class="pen-calendar-today">Bugün</span> }
                 </h3>
                 @foreach (var task in Model.ViewMode == "month" ? day.Tasks.Take(3) : day.Tasks)
                 {
@@ -67,6 +73,7 @@
                 @if (Model.ViewMode != "month" && day.Tasks.Count == 0) { <p class="pen-calendar-no-tasks">Görev yok</p> }
             </section>
         }
+    </div>
     </div>
     <section class="pen-calendar-undated" aria-labelledby="undated-heading">
         <div class="pen-calendar-heading"><h2 id="undated-heading">Tarihi belirlenmemiş görevler</h2><p>@Model.UndatedTasks.TotalCount görev</p></div>
