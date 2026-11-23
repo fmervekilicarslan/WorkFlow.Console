@@ -125,10 +125,24 @@ try {
     Check (Eval 'document.activeElement===qaCard().querySelector("select")') 'select retains keyboard focus after moving card'
     Check (Eval '[...document.querySelectorAll("[data-board-column]")].every(c=>Number(c.querySelector("[data-board-count]").textContent)===c.querySelectorAll("[data-board-card]").length)') 'column counters match moved cards'
     Check (Eval '(async()=>{const html=await (await fetch("/Tasks?view=list&Filter.PageSize=50")).text();const doc=new DOMParser().parseFromString(html,"text/html");return doc.querySelector(`[data-list-task="${qaTaskId}"] select`).value==="Todo"})()') 'separately requested list reflects saved board status'
-    # Synthetic HTML drag/drop exercises the actual registered handlers without writing outside the owned test task.
-    Eval '(()=>{const c=qaCard(),target=document.querySelector("[data-board-column=\"1\"]"),data=new DataTransfer();c.dispatchEvent(new DragEvent("dragstart",{bubbles:true,dataTransfer:data}));target.dispatchEvent(new DragEvent("dragover",{bubbles:true,cancelable:true,dataTransfer:data}));target.dispatchEvent(new DragEvent("drop",{bubbles:true,cancelable:true,dataTransfer:data}));c.dispatchEvent(new DragEvent("dragend",{bubbles:true,dataTransfer:data}))})()' | Out-Null
+    Cdp 'Emulation.setDeviceMetricsOverride' @{width=1440;height=900;deviceScaleFactor=1;mobile=$false} | Out-Null
+    $drag = Eval '(()=>{const title=qaCard().querySelector(".pen-board-title"),heading=document.querySelector("[data-board-column=\"1\"] h2"),scroller=title.closest("[data-board-cards]");heading.scrollIntoView({block:"start"});scroller.scrollTop+=title.getBoundingClientRect().top-scroller.getBoundingClientRect().top-16;const a=title.getBoundingClientRect(),b=heading.getBoundingClientRect();const x=a.left+Math.min(a.width/2,24),y=a.top+a.height/2,tx=b.left+20,ty=b.top+b.height/2;return {x,y,tx,ty,source:document.elementFromPoint(x,y)?.closest("a")===title,target:heading.contains(document.elementFromPoint(tx,ty))}})()'
+    Check ($drag.source -and $drag.target) 'native drag starts on visible title link and ends on destination heading'
+    Eval 'window.qaDragEvents=[];window.qaDragErrors=0;performance.clearResourceTimings();for(const type of ["dragstart","drop"])document.addEventListener(type,e=>qaDragEvents.push({type,target:e.target.tagName,trusted:e.isTrusted,cancelled:e.defaultPrevented}));addEventListener("error",()=>qaDragErrors++);addEventListener("unhandledrejection",()=>qaDragErrors++)' | Out-Null
+    Cdp 'Input.dispatchMouseEvent' @{type='mouseMoved';x=$drag.x;y=$drag.y} | Out-Null
+    Cdp 'Input.dispatchMouseEvent' @{type='mousePressed';x=$drag.x;y=$drag.y;button='left';buttons=1;clickCount=1} | Out-Null
+    Cdp 'Input.dispatchMouseEvent' @{type='mouseMoved';x=($drag.x+12);y=$drag.y;button='left';buttons=1} | Out-Null
+    Cdp 'Input.dispatchMouseEvent' @{type='mouseMoved';x=$drag.tx;y=$drag.ty;button='left';buttons=1} | Out-Null
+    Cdp 'Input.dispatchMouseEvent' @{type='mouseMoved';x=($drag.tx+1);y=$drag.ty;button='left';buttons=1} | Out-Null
+    Cdp 'Input.dispatchMouseEvent' @{type='mouseReleased';x=($drag.tx+1);y=$drag.ty;button='left';buttons=0;clickCount=1} | Out-Null
     WaitUpdate
-    Check (Eval 'qaCard().dataset.status==="1"&&qaCard().closest("[data-board-column]").dataset.boardColumn==="1"') 'drag/drop handlers move card after successful fetch'
+    $trace = Eval '({events:qaDragEvents,errors:qaDragErrors,status:performance.getEntriesByType("resource").filter(e=>new URL(e.name).pathname==="/Tasks/UpdateBoardStatus").map(e=>e.responseStatus)})'
+    Write-Output ('DIAGNOSTIC: native drag ' + ($trace | ConvertTo-Json -Compress -Depth 4))
+    Check (Eval 'qaDragEvents.some(e=>e.type==="dragstart"&&e.trusted&&!e.cancelled)&&qaDragEvents.some(e=>e.type==="drop"&&e.trusted)&&qaDragErrors===0') 'Chrome mouse gesture produces trusted drag and drop events without JS errors'
+    Check ($trace.status.Count -eq 1 -and $trace.status[0] -eq 200) 'native drag sends exactly one successful UpdateBoardStatus request'
+    Check (Eval 'qaCard().dataset.status==="1"&&qaCard().closest("[data-board-column]").dataset.boardColumn==="1"') 'native title drag moves card after successful fetch'
+    OpenPage '/Tasks?view=board'
+    Check (Eval 'qaCard().dataset.status==="1"&&qaCard().closest("[data-board-column]").dataset.boardColumn==="1"') 'fresh board request reads the dragged status from PostgreSQL'
     Eval '(()=>{window.qaOriginalFetch=window.fetch;window.qaPreviousNext=qaCard().nextElementSibling;window.fetch=async()=>new Response(JSON.stringify({success:false,message:"Durum kaydedilemedi. Lütfen tekrar deneyin."}),{status:503,headers:{"Content-Type":"application/json"}});const s=qaCard().querySelector("select");s.value="2";s.dispatchEvent(new Event("change",{bubbles:true}));})()' | Out-Null
     WaitUpdate
     Check (Eval 'qaCard().dataset.status==="1"&&qaCard().closest("[data-board-column]").dataset.boardColumn==="1"&&qaCard().nextElementSibling===window.qaPreviousNext&&qaCard().querySelector("select").value==="1"') 'server failure restores previous column, order and select'
