@@ -17,6 +17,19 @@ if (args.Length > 0)
         {
             case "--stage2": await Stage2Checks.Run(); break;
             case "--calendar-focused": await CalendarFocusedChecks.Run(); break;
+            case "--authentication":
+                var authenticationConnection = await TestDatabase.VerifiedConnection();
+                WorkFlowDbContext OpenAuthenticationDatabase() => new(new DbContextOptionsBuilder<WorkFlowDbContext>()
+                    .UseNpgsql(authenticationConnection.ConnectionString).Options);
+                using (var authenticationDatabase = OpenAuthenticationDatabase())
+                    if ((await authenticationDatabase.Database.GetPendingMigrationsAsync()).Any())
+                        throw new InvalidOperationException("Authentication checks require the existing test schema; migrations are not applied.");
+                await using (var authenticationHost = await TestAuthHost.Start(authenticationConnection.ConnectionString))
+                {
+                    var authenticationCount = await AuthenticationChecks.Run(authenticationHost, OpenAuthenticationDatabase);
+                    Console.WriteLine($"{authenticationCount} authentication checks passed.");
+                }
+                break;
             case "--database": await DatabaseChecks.Run(); break;
             case "--prepare-test-database": await TestDatabase.Prepare(); break;
             default: throw new InvalidOperationException("Unknown test mode; refusing to run.");

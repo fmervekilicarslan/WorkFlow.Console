@@ -54,13 +54,18 @@ try {
         }
     }
     OpenPage '/Account/Settings'
-    Check (Eval '!!document.querySelector("main #settings-heading")&&!!document.querySelector("main a[href=\"/Account/Profile\"]")&&!document.querySelector("main input[type=password]")') 'settings links to the profile without introducing password controls'
+    Check (Eval '!!document.querySelector("main #settings-heading")&&!!document.querySelector("main a[href=\"/Account/Profile\"]")&&!!document.querySelector("#settings-password-form")') 'settings links to the profile and password form'
+    Check (Eval '(()=>{const f=document.querySelector("#settings-password-form");return f.method==="post"&&new URL(f.action).pathname==="/Account/ChangePassword"&&!!f.querySelector("[name=__RequestVerificationToken]")&&["CurrentPassword","NewPassword","ConfirmPassword"].every(id=>{const n=f.querySelector("#"+id),described=n?.getAttribute("aria-describedby")?.trim().split(/\s+/);return n?.type==="password"&&n.value===""&&n.labels.length===1&&n.autocomplete===(id==="CurrentPassword"?"current-password":"new-password")&&described?.length>0&&described.every(target=>!!document.getElementById(target))})})()') 'password form has CSRF and labelled empty password fields with correct autocomplete'
     foreach($width in @(1440,768,390,320)) {
         Cdp 'Emulation.setDeviceMetricsOverride' @{width=$width;height=900;deviceScaleFactor=1;mobile=$false}|Out-Null
         foreach($theme in @('light','dark')) {
             Check (Eval ('(()=>{const b=document.querySelector("main [data-theme-choice='+$theme+']");if(!b?.getBoundingClientRect().width)return false;b.click();return document.documentElement.dataset.theme==="'+$theme+'"&&b.getAttribute("aria-pressed")==="true"&&document.documentElement.scrollWidth<=innerWidth})()')) "settings applies the theme and fits at $width px $theme"
+            Check (Eval '[...document.querySelectorAll("#settings-password-form input[type=password]")].length===3&&[...document.querySelectorAll("#settings-password-form input[type=password]")].every(n=>{const r=n.getBoundingClientRect();return r.width>0&&r.height>=44&&r.left>=0&&r.right<=innerWidth})') "password fields fit with touch targets at $width px $theme"
         }
     }
+    Eval 'document.querySelector("#settings-password-form").requestSubmit()'|Out-Null;WaitPage
+    Check (Eval '!!document.querySelector("#settings-password-form [role=alert]")&&[...document.querySelectorAll("#settings-password-form input[type=password]")].every(n=>n.value===""&&n.getAttribute("aria-invalid")==="true")') 'empty password submission exposes errors and leaves all secrets empty'
+    Check (Eval 'document.activeElement===document.querySelector("#settings-password-form [data-validation-alert]")') 'password validation alert receives keyboard focus'
     Cdp 'Emulation.setDeviceMetricsOverride' @{width=390;height=900;deviceScaleFactor=1;mobile=$false}|Out-Null
     Cdp 'Emulation.setScriptExecutionDisabled' @{value=$true}|Out-Null
     OpenPage '/Tasks?view=list'

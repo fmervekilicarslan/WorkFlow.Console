@@ -50,7 +50,7 @@ internal static class AuthenticationChecks
                 using var response = await anonymous.Client.GetAsync(path);
                 Check(LoginChallenge(response), "anonymous protected GET requires same-origin login: " + path.Split('?')[0]);
             }
-            foreach (var action in new[] { "/Tasks/Create", "/Tasks/Edit/" + Guid.NewGuid(), "/Tasks/Delete", "/Tasks/UpdateStatus", "/Tasks/UpdateBoardStatus", "/Account/Logout", "/Account/Profile" })
+            foreach (var action in new[] { "/Tasks/Create", "/Tasks/Edit/" + Guid.NewGuid(), "/Tasks/Delete", "/Tasks/UpdateStatus", "/Tasks/UpdateBoardStatus", "/Account/Logout", "/Account/Profile", "/Account/ChangePassword" })
             {
                 using var response = await Post(anonymous, action, new() { ["gorevId"] = Guid.NewGuid().ToString(), ["yeniDurum"] = "1" });
                 Check(LoginChallenge(response), "anonymous protected POST requires same-origin login: " + action.Split('/')[2]);
@@ -108,7 +108,8 @@ internal static class AuthenticationChecks
                 Check(profile.IsSuccessStatusCode && profile.Headers.CacheControl?.NoStore == true && profileHtml.Contains(ownEmail) && !profileHtml.Contains(foreignEmail), "profile shows only the signed-in user's email and is not cached");
                 Check(settings.IsSuccessStatusCode && settings.Headers.CacheControl?.NoStore == true &&
                     settingsHtml.Contains("href=\"/Account/Profile\"") && settingsHtml.Contains("data-theme-choice=\"dark\"") &&
-                    !settingsHtml.Contains("type=\"password\""), "account settings exposes profile and theme controls without a password-change form");
+                    settingsHtml.Contains("id=\"settings-password-form\"") && settingsHtml.Contains("autocomplete=\"current-password\""),
+                    "account settings exposes profile, theme and current-password protected change form");
             }
             using (var missingProfileCsrf = await Post(a, "/Account/Profile", new() { ["DisplayName"] = "csrf test" }, csrf: false))
                 Check(missingProfileCsrf.StatusCode == HttpStatusCode.BadRequest, "profile update rejects a missing antiforgery token");
@@ -231,6 +232,77 @@ internal static class AuthenticationChecks
                 session.Cookies.Add(host.BaseUri, new Cookie(".WorkFlow.Identity", "tampered-not-a-signed-ticket", "/") { Secure = true, HttpOnly = true });
                 using var response = await session.Client.GetAsync("/Tasks");
                 Check(LoginChallenge(response), "tampered authentication ticket cannot access protected tasks");
+            }
+            var newSecret = "Qa!8aZ" + Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
+            Dictionary<string, string> PasswordFields(string current, string next, string confirm) =>
+                new() { ["CurrentPassword"] = current, ["NewPassword"] = next, ["ConfirmPassword"] = confirm };
+            string hashBefore; string stampBefore; string foreignHash;
+            using (var db = open())
+            {
+                var current = await db.Users.AsNoTracking().SingleAsync(u => u.Id == ownerA);
+                hashBefore = current.PasswordHash!; stampBefore = current.SecurityStamp!;
+                foreignHash = (await db.Users.AsNoTracking().SingleAsync(u => u.Id == ownerB)).PasswordHash!;
+            }
+            using (var response = await a.Client.GetAsync("/Account/ChangePassword"))
+                Check(response.StatusCode == HttpStatusCode.MethodNotAllowed, "password changes require POST");
+            using (var response = await Post(a, "/Account/ChangePassword", PasswordFields(secret, newSecret, newSecret), csrf: false))
+                Check(response.StatusCode == HttpStatusCode.BadRequest, "password change rejects missing CSRF");
+            var foreignToken = await Token(b, "/Account/Settings");
+            var foreignFields = PasswordFields(secret, newSecret, newSecret);
+            foreignFields["__RequestVerificationToken"] = foreignToken;
+            using (var response = await a.Client.PostAsync("/Account/ChangePassword", new FormUrlEncodedContent(foreignFields)))
+                Check(response.StatusCode == HttpStatusCode.BadRequest, "password change rejects another user's CSRF token");
+            foreach (var invalid in new[]
+            {
+                (Current: "wrong-current-password", Next: newSecret, Confirm: newSecret, Error: "Mevcut parola doğru değil."),
+                (Current: secret, Next: newSecret, Confirm: "mismatch", Error: "Yeni parolalar eşleşmiyor."),
+                (Current: secret, Next: "short", Confirm: "short", Error: "Parola en az 12 karakter olmalıdır."),
+                (Current: secret, Next: "onlylowercaseletters", Confirm: "onlylowercaseletters", Error: "Parola en az bir rakam içermelidir.")
+            })
+            {
+                using var response = await Post(a, "/Account/ChangePassword", PasswordFields(invalid.Current, invalid.Next, invalid.Confirm), tokenPath: "/Account/Settings");
+                var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+                Check(response.StatusCode == HttpStatusCode.OK && html.Contains(invalid.Error), "invalid password change shows Turkish feedback");
+                Check(!Regex.IsMatch(html, "type=\"password\"[^>]*value=\"[^\"]+\"") &&
+                    !html.Contains(invalid.Current) && !html.Contains(invalid.Next), "invalid password change never echoes supplied passwords");
+            }
+            using (var db = open())
+            {
+                var current = await db.Users.AsNoTracking().SingleAsync(u => u.Id == ownerA);
+                Check(current.PasswordHash == hashBefore && current.SecurityStamp == stampBefore, "rejected password changes preserve hash and security stamp");
+            }
+            var changeFields = PasswordFields(secret, newSecret, newSecret);
+            changeFields["UserId"] = ownerB; changeFields["Email"] = emailB;
+            using (var response = await Post(a, "/Account/ChangePassword", changeFields, tokenPath: "/Account/Settings"))
+            {
+                Check(response.StatusCode == HttpStatusCode.Redirect && response.Headers.Location?.ToString() == "/Account/Settings", "password change redirects to settings");
+                var cookieHeader = string.Join(";", response.Headers.GetValues("Set-Cookie"));
+                Check(cookieHeader.Contains(".WorkFlow.Identity=") && cookieHeader.Contains("httponly", StringComparison.OrdinalIgnoreCase) &&
+                    cookieHeader.Contains("secure", StringComparison.OrdinalIgnoreCase), "password change refreshes a protected authentication cookie");
+            }
+            using (var db = open())
+            {
+                var current = await db.Users.AsNoTracking().SingleAsync(u => u.Id == ownerA);
+                var hasher = new PasswordHasher<ApplicationUser>();
+                Check(current.PasswordHash != hashBefore && current.SecurityStamp != stampBefore &&
+                    hasher.VerifyHashedPassword(current, current.PasswordHash!, newSecret) != PasswordVerificationResult.Failed &&
+                    hasher.VerifyHashedPassword(current, current.PasswordHash!, secret) == PasswordVerificationResult.Failed,
+                    "password change rotates the Identity hash and security stamp");
+                Check((await db.Users.AsNoTracking().SingleAsync(u => u.Id == ownerB)).PasswordHash == foreignHash,
+                    "forged user and email fields cannot change another account's password");
+            }
+            using (var response = await a.Client.GetAsync("/Account/Settings"))
+                Check(response.IsSuccessStatusCode && WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync()).Contains("Parolanız güncellendi."),
+                    "refreshed session stays authenticated and sees Turkish success feedback");
+            using (var oldLogin = host.CreateSession())
+            using (var response = await Post(oldLogin, "/Account/Login", Credentials(emailA, secret)))
+                Check(response.StatusCode == HttpStatusCode.OK && oldLogin.Cookies.GetCookies(host.BaseUri)[".WorkFlow.Identity"] is null,
+                    "old password no longer signs in");
+            using (var newLogin = host.CreateSession())
+            {
+                using var response = await Post(newLogin, "/Account/Login", Credentials(emailA, newSecret));
+                Check(response.StatusCode == HttpStatusCode.Redirect && newLogin.Cookies.GetCookies(host.BaseUri)[".WorkFlow.Identity"] is not null,
+                    "new password signs in through the normal login endpoint");
             }
             using (var response = await a.Client.GetAsync("/Account/Logout")) Check(response.StatusCode == HttpStatusCode.MethodNotAllowed, "logout is not available through GET");
             using (var response = await Post(a, "/Account/Logout", new(), csrf: false)) Check(response.StatusCode == HttpStatusCode.BadRequest, "logout rejects missing antiforgery token");

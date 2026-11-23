@@ -101,7 +101,37 @@ public sealed class AccountController(UserManager<ApplicationUser> users, SignIn
     }
 
     [HttpGet]
-    public IActionResult Settings() => View();
+    public IActionResult Settings() => View(new ChangePasswordViewModel());
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangePassword([FromForm] ChangePasswordViewModel model)
+    {
+        var user = await users.GetUserAsync(User);
+        if (user is null) return Challenge();
+
+        if (!ModelState.IsValid) return View(nameof(Settings), new ChangePasswordViewModel());
+
+        var result = await users.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors)
+            {
+                var field = error.Code switch
+                {
+                    nameof(IdentityErrorDescriber.PasswordMismatch) => nameof(model.CurrentPassword),
+                    _ when error.Code.StartsWith("Password", StringComparison.Ordinal) => nameof(model.NewPassword),
+                    _ => string.Empty
+                };
+                ModelState.AddModelError(field, error.Description);
+            }
+            return View(nameof(Settings), new ChangePasswordViewModel());
+        }
+
+        await signIn.RefreshSignInAsync(user);
+        TempData["Success"] = "Parolanız güncellendi.";
+        return RedirectToAction(nameof(Settings));
+    }
 
     private string? SafeReturnUrl(string? url) => !string.IsNullOrEmpty(url) && Url.IsLocalUrl(url) ? url : null;
     private IActionResult RedirectAfterSignIn(string? url) => SafeReturnUrl(url) is { } local

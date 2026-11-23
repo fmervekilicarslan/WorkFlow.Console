@@ -1,17 +1,55 @@
+@model ChangePasswordViewModel
 @{
     ViewData["Title"] = "Hesap Ayarları";
     ViewData["PenPage"] = "account";
+    bool HasError(string field) => ViewData.ModelState[field]?.Errors.Count > 0;
 }
 <div class="pen-heading pen-account-heading"><div><h1>Hesap Ayarları</h1><p>Hesap bilgilerini ve görünüm tercihini yönet.</p></div></div>
+<partial name="_PenFeedback" />
 <div class="pen-account-page pen-settings-list">
     <section class="pen-settings-row" aria-labelledby="settings-profile">
         <span class="pen-form-icon"><partial name="_PenIcon" model='"edit"' /></span>
         <div><h2 id="settings-profile">Profil Bilgileri</h2><p>Görünen adını ve e-posta adresini görüntüle.</p></div>
         <a class="pen-button pen-secondary" asp-action="Profile">Profilim</a>
     </section>
-    <section class="pen-settings-row" aria-labelledby="settings-heading">
-        <span class="pen-form-icon"><partial name="_PenIcon" model='"progress"' /></span>
-        <div><h2 id="settings-heading">Güvenlik</h2><p>Oturumun güvenli bir çerezle korunur.</p></div>
+    <section class="pen-form-card pen-account-card" aria-labelledby="settings-heading">
+        <header>
+            <span class="pen-form-icon"><partial name="_PenIcon" model='"progress"' /></span>
+            <div><h2 id="settings-heading">Güvenlik</h2><p>Hesap parolanı değiştir.</p></div>
+        </header>
+        <form id="settings-password-form" asp-action="ChangePassword" method="post" novalidate>
+            <div class="pen-form-fields">
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="pen-notice pen-notice-error" role="alert" tabindex="-1" data-validation-alert>
+                        <partial name="_PenIcon" model='"alert"' />
+                        <div><strong>Parola değiştirilemedi.</strong><div asp-validation-summary="All"></div></div>
+                    </div>
+                }
+                <div class="pen-field">
+                    <label asp-for="CurrentPassword"></label>
+                    <input asp-for="CurrentPassword" type="password" value="" autocomplete="current-password" required
+                           aria-describedby="current-password-error" aria-invalid="@(HasError(nameof(Model.CurrentPassword)) ? "true" : "false")" />
+                    <span id="current-password-error" asp-validation-for="CurrentPassword" class="pen-field-error"></span>
+                </div>
+                <div class="pen-field">
+                    <label asp-for="NewPassword"></label>
+                    <input asp-for="NewPassword" type="password" value="" autocomplete="new-password" required
+                           aria-describedby="new-password-hint new-password-error" aria-invalid="@(HasError(nameof(Model.NewPassword)) ? "true" : "false")" />
+                    <span id="new-password-hint" class="pen-field-hint">En az 12 karakter, büyük ve küçük harf, rakam ve özel karakter kullan.</span>
+                    <span id="new-password-error" asp-validation-for="NewPassword" class="pen-field-error"></span>
+                </div>
+                <div class="pen-field">
+                    <label asp-for="ConfirmPassword"></label>
+                    <input asp-for="ConfirmPassword" type="password" value="" autocomplete="new-password" required
+                           aria-describedby="confirm-password-error" aria-invalid="@(HasError(nameof(Model.ConfirmPassword)) ? "true" : "false")" />
+                    <span id="confirm-password-error" asp-validation-for="ConfirmPassword" class="pen-field-error"></span>
+                </div>
+            </div>
+            <div class="pen-form-actions">
+                <button type="submit" class="pen-button pen-primary">Parolayı değiştir</button>
+            </div>
+        </form>
     </section>
     <section class="pen-settings-row" aria-labelledby="settings-preferences">
         <span class="pen-form-icon"><partial name="_PenIcon" model='"sun"' /></span>
