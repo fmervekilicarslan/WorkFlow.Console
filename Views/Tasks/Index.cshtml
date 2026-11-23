@@ -50,8 +50,8 @@
             <input type="hidden" name="Filter.Sort" value="@Model.Filter.Sort" />
             <input type="hidden" name="Filter.PageSize" value="@Model.Filter.PageSize" />
             @if (isBoard) { <input type="hidden" name="Filter.Page" value="@Model.Filter.Page" /> }
-            <label class="pen-sr-only" for="task-search">Başlık veya açıklamada ara</label>
-            <input id="task-search" name="Filter.Search" value="@Model.Filter.Search" type="search" maxlength="200" placeholder="Görevlerde ara..." />
+            <label class="pen-sr-only" for="task-search">Görev kodu, başlık veya açıklamada ara</label>
+            <input id="task-search" name="Filter.Search" value="@Model.Filter.Search" type="search" maxlength="200" placeholder="Kod veya görev ara..." />
             <button type="submit" class="pen-icon-button" aria-label="Görevlerde ara"><partial name="_PenIcon" model='"search"' /></button>
         </form>
     </div>
@@ -145,7 +145,7 @@
             {
                 var columnTasks = Model.Tasks.Where(task => task.Status == status).ToList();
                 <section class="pen-board-column" data-board-column="@((int)status)" aria-labelledby="board-heading-@status">
-                    <h2 id="board-heading-@status"><span>@StatusText(status)</span><span class="pen-board-count" data-board-count>@columnTasks.Count</span></h2>
+                    <h2 id="board-heading-@status"><span>@StatusText(status)</span><span class="pen-board-heading-actions"><span class="pen-board-count" data-board-count>@columnTasks.Count</span><a class="pen-board-add" asp-action="Create" asp-route-status="@status" asp-route-view="board" aria-label="@StatusText(status) sütununa görev ekle">+</a></span></h2>
                     <div class="pen-board-cards" data-board-cards tabindex="0" role="region" aria-label="@StatusText(status) görevleri">
                         @foreach (var task in columnTasks)
                         {

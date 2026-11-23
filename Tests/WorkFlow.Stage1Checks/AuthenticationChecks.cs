@@ -186,6 +186,23 @@ internal static class AuthenticationChecks
             {
                 foreach (var view in new[] { "list", "board" })
                 {
+                    foreach (var (search, visible) in new[] { (own.Code.ToLowerInvariant(), true), (foreign.Code, false), (legacy.Code, false) })
+                    {
+                        var byCode = await session.Client.GetStringAsync("/Tasks?view=" + view + "&Filter.Search=" + Uri.EscapeDataString(search));
+                        Check(byCode.Contains(own.Id.ToString()) == visible && !byCode.Contains(foreign.Id.ToString()) &&
+                            !byCode.Contains(legacy.Id.ToString()), view + " task-code search respects ownership and case");
+                    }
+                }
+                foreach (var view in new[] { "month", "week", "day" })
+                {
+                    var byCode = await session.Client.GetStringAsync("/Calendar?view=" + view + "&date=2028-02-29&Filter.Search=" + Uri.EscapeDataString(own.Code.ToLowerInvariant()));
+                    var foreignCode = await session.Client.GetStringAsync("/Calendar?view=" + view + "&date=2028-02-29&Filter.Search=" + Uri.EscapeDataString(foreign.Code));
+                    Check(byCode.Contains(own.Id.ToString()) && !byCode.Contains(foreign.Id.ToString()) &&
+                        !foreignCode.Contains(own.Id.ToString()) && !foreignCode.Contains(foreign.Id.ToString()),
+                        "calendar " + view + " task-code search respects ownership");
+                }
+                foreach (var view in new[] { "list", "board" })
+                {
                     var html = await session.Client.GetStringAsync("/Tasks?view=" + view + "&Filter.Search=" + marker + "&OwnerId=" + foreign.OwnerId);
                     Check(html.Contains(own.Id.ToString()) && !html.Contains(foreign.Id.ToString()) && !html.Contains(legacy.Id.ToString()), view + " includes own tasks and hides foreign/unowned tasks despite forged owner query");
                 }

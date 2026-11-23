@@ -89,6 +89,8 @@ Uygulama, ASP.NET Core MVC mimarisine uygun olarak katmanlara ayrılmıştır.
 
 ## Kurulum ve Çalıştırma
 
+Yerel HTTPS sunumu için [izole demo başlatma ve sunum adımları](Docs/PresentationDemo.md) sayfasına bakın.
+
 Projeyi çalıştırabilmek için bilgisayarınızda **.NET 10 SDK** ve erişilebilir bir **PostgreSQL** veritabanı olmalıdır. Mevcut çalışma düzeninde MVC ve Console, `RiderProjects` altında kardeş klasörlerdir.
 
 1. Repository'yi bilgisayarınıza klonlayın:

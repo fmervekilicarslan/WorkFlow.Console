@@ -67,6 +67,7 @@ try {
     Check ($listIds -eq $boardIds -and $boardIds.Length -gt 10) 'separate list and board pages render the same complete task IDs'
     Check (Eval '!!document.querySelector("[data-board-view]")&&document.querySelector("[data-task-view=board]").getAttribute("aria-current")==="page"&&new URL(location.href).searchParams.get("view")==="board"') 'board link changes URL view and accessible state'
     Check (Eval 'document.querySelectorAll("[data-board-card]").length>10&&!document.querySelector("[data-list-view]")') 'board renders all matched tasks and excludes inactive list DOM'
+    Check (Eval '(()=>{const columns=[...document.querySelectorAll("[data-board-column]")];return columns.length===3&&columns.every(c=>{const a=[...c.querySelectorAll("a[href]")].find(a=>new URL(a.href).pathname==="/Tasks/Create");if(!a||a.tabIndex<0||!a.getAttribute("aria-label"))return false;const u=new URL(a.href);return u.searchParams.get("view")==="board"&&["Todo","InProgress","Completed"][Number(c.dataset.boardColumn)]===u.searchParams.get("status")})})()') 'each board column provides an accessible create link with its initial status'
     Check (Eval '!document.querySelector(".pen-pagination,.pen-status-tabs,select[name=\"Filter.PageSize\"],select[name=\"Filter.Sort\"]")') 'board omits list-only controls'
     foreach($width in @(1440,390,320)) {
         Cdp 'Emulation.setDeviceMetricsOverride' @{width=$width;height=900;deviceScaleFactor=1;mobile=$false} | Out-Null

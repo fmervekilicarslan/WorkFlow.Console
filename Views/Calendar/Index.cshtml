@@ -34,7 +34,7 @@
     <form method="get" asp-controller="Calendar" asp-action="Index" class="pen-calendar-filters" novalidate>
         <input type="hidden" name="view" value="@Model.ViewMode" />
         <div class="pen-calendar-field"><label for="calendar-date">Tarih</label><input id="calendar-date" type="text" name="date" value="@(ViewData.ModelState["date"]?.Errors.Count > 0 ? ViewData.ModelState["date"]?.AttemptedValue : Model.SelectedDate.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture))" inputmode="numeric" placeholder="GG.AA.YYYY" pattern="[0-9]{2}\.[0-9]{2}\.[0-9]{4}" required aria-label="Tarih, GG.AA.YYYY biçiminde" /></div>
-        <div class="pen-calendar-field"><label asp-for="Filter.Search">Ara</label><input asp-for="Filter.Search" type="search" maxlength="200" placeholder="Görevlerde ara..." /></div>
+        <div class="pen-calendar-field"><label asp-for="Filter.Search">Kod veya görev ara</label><input asp-for="Filter.Search" type="search" maxlength="200" placeholder="Kod veya görev ara..." /></div>
         <div class="pen-calendar-field"><label asp-for="Filter.Status">Durum</label><select asp-for="Filter.Status"><option value="">Tüm durumlar</option>@foreach (var status in Enum.GetValues<Status>()) { <option value="@((int)status)">@StatusText(status)</option> }</select></div>
         <div class="pen-calendar-field"><label asp-for="Filter.Priority">Öncelik</label><select asp-for="Filter.Priority"><option value="">Tüm öncelikler</option>@foreach (var priority in Enum.GetValues<Priority>()) { <option value="@((int)priority)">@PriorityText(priority)</option> }</select></div>
         <button type="submit" class="pen-button pen-primary">Uygula</button>

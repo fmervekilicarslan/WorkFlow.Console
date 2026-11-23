@@ -132,9 +132,15 @@ public class TaskService : ITaskService
         var query = OwnedTasks();
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var pattern = "%" + search.Trim().Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";
+            var term = search.Trim();
+            var codeNumber = 0L;
+            var isCodeSearch = term.StartsWith("WF-", StringComparison.OrdinalIgnoreCase) &&
+                long.TryParse(term.AsSpan(3), System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture, out codeNumber) && codeNumber > 0;
+            var pattern = "%" + term.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";
             query = query.Where(task => EF.Functions.ILike(task.Title, pattern, "\\") ||
-                EF.Functions.ILike(task.Description, pattern, "\\"));
+                EF.Functions.ILike(task.Description, pattern, "\\") ||
+                (isCodeSearch && task.CodeNumber == codeNumber));
         }
         if (status.HasValue) query = query.Where(task => task.Status == status.Value);
         if (priority.HasValue) query = query.Where(task => task.Priority == priority.Value);

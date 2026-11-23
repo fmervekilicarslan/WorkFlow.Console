@@ -45,6 +45,10 @@ internal static class Stage2Checks
             var first = service.SayfaliGorevleriGetir(marker, pageSize: 5);
             Check(service.TumGorevleriGetir(marker + " 11").Single().Id == created[11].Id, "Title search finds the expected task");
             Check(service.TumGorevleriGetir(marker + " description").Count == 12, "Description search finds all test tasks");
+            Check(service.TumGorevleriGetir(created[11].Code.ToLowerInvariant()).Single().Id == created[11].Id,
+                "Full task code search is case insensitive");
+            Check(service.TumGorevleriGetir(marker + "%").Count == 0 && service.TumGorevleriGetir(marker + "_").Count == 0,
+                "Task search treats wildcard characters literally");
             var second = service.SayfaliGorevleriGetir(marker, page: 2, pageSize: 5);
             var last = service.SayfaliGorevleriGetir(marker, page: int.MaxValue, pageSize: 5);
             Check(first.TotalCount == 12 && first.TotalPages == 3 && first.Items.Count == 5 && last.Page == 3 && last.Items.Count == 2, "Pagination counts and oversized page clamp");
@@ -95,10 +99,52 @@ internal static class Stage2Checks
             Check(readyResponse.IsSuccessStatusCode, "MVC HTTPS test server started on isolated local port with real authenticated session");
             async Task<string> Get(string path) => await client.GetStringAsync(path);
             string Token(string html) => WebUtility.HtmlDecode(Regex.Match(html, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value);
+            bool IsBoardIndex(string? target)
+            {
+                if (!Uri.TryCreate(client.BaseAddress, WebUtility.HtmlDecode(target), out var uri)) return false;
+                return uri.Scheme == client.BaseAddress!.Scheme && uri.Host == client.BaseAddress.Host &&
+                    uri.Port == client.BaseAddress.Port &&
+                    (uri.AbsolutePath is "/" or "/Tasks" or "/Tasks/Index") && uri.Query == "?view=board";
+            }
             async Task<HttpResponseMessage> Post(string path, Dictionary<string, string> values) => await client.PostAsync(path, new FormUrlEncodedContent(values));
             var form = await Get("/Tasks/Create");
             var token = Token(form);
             Check(token.Length > 0 && form.Contains("name=\"DueDate\""), "Create form renders shared fields and antiforgery token");
+            foreach (var status in Enum.GetValues<Status>())
+            {
+                var boardForm = await Get("/Tasks/Create?status=" + status + "&view=board");
+                Check(Regex.IsMatch(boardForm, "<option[^>]*selected[^>]*value=\"" + (int)status + "\"|<option[^>]*value=\"" + (int)status + "\"[^>]*selected"),
+                    "Board Create starts in column status " + status);
+                var cancelHref = Regex.Match(boardForm, "<a\\b[^>]*href=\"([^\"]+)\"[^>]*>\\s*İptal\\s*</a>").Groups[1].Value;
+                Check(boardForm.Contains("name=\"ReturnView\"") && boardForm.Contains("value=\"board\"") &&
+                    IsBoardIndex(cancelHref),
+                    "Board Create carries a safe board return and cancel link");
+            }
+            var unsafeCreate = await Get("/Tasks/Create?status=999&view=https%3A%2F%2Funtrusted.example");
+            Check(!unsafeCreate.Contains("untrusted.example"), "Create rejects an external return-view query");
+            var boardSnapshot = JsonSerializer.Serialize(await db.Tasks.AsNoTracking().OrderBy(t => t.Id).ToListAsync());
+            using (var missingBoardCsrf = await Post("/Tasks/Create", new() { ["Title"] = marker + " csrf-board", ["Priority"] = "1", ["Status"] = "1", ["ReturnView"] = "board" }))
+                Check(missingBoardCsrf.StatusCode == HttpStatusCode.BadRequest, "Board Create rejects missing CSRF");
+            using (var invalidBoard = await Post("/Tasks/Create", new() { ["Title"] = " ", ["Priority"] = "1", ["Status"] = "1", ["ReturnView"] = "board", ["__RequestVerificationToken"] = token }))
+            {
+                var invalidBoardHtml = await invalidBoard.Content.ReadAsStringAsync();
+                Check(invalidBoard.StatusCode == HttpStatusCode.OK && invalidBoardHtml.Contains("name=\"ReturnView\"") &&
+                    invalidBoardHtml.Contains("value=\"board\"") && invalidBoardHtml.Contains("validation"),
+                    "Invalid board Create retains board context with validation feedback");
+            }
+            Check(JsonSerializer.Serialize(await db.Tasks.AsNoTracking().OrderBy(t => t.Id).ToListAsync()) == boardSnapshot,
+                "Rejected board Create requests preserve all tasks");
+            using (var boardCreate = await Post("/Tasks/Create", new() { ["Title"] = marker + " board-created", ["Priority"] = "1", ["Status"] = "1", ["ReturnView"] = "board", ["__RequestVerificationToken"] = token }))
+                Check(boardCreate.StatusCode == HttpStatusCode.Redirect && IsBoardIndex(boardCreate.Headers.Location?.ToString()),
+                    "Successful board Create returns to the board");
+            using (var boardCreatedDb = Open())
+            {
+                var boardCreated = await boardCreatedDb.Tasks.AsNoTracking().SingleAsync(t => t.Title == marker + " board-created");
+                Check(boardCreated.Status == Status.InProgress && boardCreated.OwnerId == account.UserId,
+                    "Board Create persists the selected status with the authenticated owner");
+                boardCreatedDb.Tasks.Remove(boardCreated);
+                await boardCreatedDb.SaveChangesAsync();
+            }
             Check(Regex.IsMatch(form, @"<form\b[^>]*\bnovalidate\b") && form.Contains("required")
                 && form.Contains("aria-describedby=\"title-help title-error\""), "Create delegates required validation to MVC while retaining accessible field semantics");
             var invalidCreates = new[]

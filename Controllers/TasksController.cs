@@ -119,13 +119,25 @@ public class TasksController : Controller
     
     //TaskCreateViewModel → Yeni görev bilgilerini almak için.
     
-    public IActionResult Create() => View(new TaskCreateViewModel());
+    public IActionResult Create(Status? status = null, string? view = null)
+    {
+        var model = new TaskCreateViewModel
+        {
+            Status = status.HasValue && Enum.IsDefined(status.Value) ? status.Value : Status.Todo,
+            ReturnView = view == "board" ? "board" : null
+        };
+        // GET sorgusundaki geçersiz enum değerleri boş formun gönderim hatası değildir.
+        ModelState.Clear();
+        return View(model);
+    }
     //kullanıcı görev ekleme sayfasını açtığında boş bir form gösterilmesi amaçlanıyor.
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public IActionResult Create(TaskCreateViewModel model)
     {
+        model.ReturnView = model.ReturnView == "board" ? "board" : null;
+        ModelState.Remove(nameof(model.ReturnView));
         NormalizeFormErrors(model);
 
         if (string.IsNullOrWhiteSpace(model.Title) &&
@@ -164,7 +176,9 @@ public class TasksController : Controller
             TempData["Success"] = "Görev eklendi.";
             
             //Mevcut action'ı bitir ve tarayıcıyı aynı Controller içerisindeki Index action'ına yönlendir.
-            return RedirectToAction(nameof(Index));
+            return model.ReturnView == "board"
+                ? RedirectToAction(nameof(Index), new { view = "board" })
+                : RedirectToAction(nameof(Index));
         }
         catch (GecersizGorevException ex)
         {

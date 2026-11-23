@@ -343,6 +343,10 @@ html[data-theme="dark"] .pen-app .pen-skip:focus { background: #26354a; color: w
 .pen-board-column { min-width: 0; padding: 12px; border: 1px solid var(--pen-line); border-radius: 10px; background: #f8f9fc; }
 .pen-board-column h2 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 10px; font-size: 13px; font-weight: 600; }
 .pen-board-count { min-width: 24px; padding: 2px 7px; border-radius: 5px; text-align: center; color: var(--pen-text); background: #e9ecf4; font-size: 11px; }
+.pen-board-heading-actions { display: inline-flex; align-items: center; gap: 4px; }
+.pen-board-add { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 7px; color: var(--pen-ink); font-size: 21px; line-height: 1; text-decoration: none; }
+.pen-board-add:hover { background: var(--pen-bg); }
+.pen-board-add:focus-visible { outline: 2px solid var(--pen-purple); outline-offset: 2px; }
 .pen-board-cards { display: grid; gap: 8px; min-height: 12px; align-content: start; scrollbar-width: thin; scrollbar-color: #b0b7c8 transparent; }
 .pen-board-cards:focus-visible { outline: 2px solid var(--pen-purple); outline-offset: -2px; }
 @media (min-width: 761px) { .pen-board-cards { max-height: clamp(300px, 60vh, 650px); overflow-y: auto; overscroll-behavior: contain; } }
