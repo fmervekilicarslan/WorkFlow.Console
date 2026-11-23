@@ -494,4 +494,32 @@ html[data-theme="dark"] .pen-app .pen-account-dropdown > a, html[data-theme="dar
 html[data-theme="dark"] .pen-app .pen-account-dropdown > a:hover, html[data-theme="dark"] .pen-app .pen-account-dropdown .pen-account-link:hover { background: #27364c; }
 html[data-theme="dark"] .pen-app .pen-account-menu-email { border-color: var(--pen-line); color: #b8c2d2; }
 @media (max-width: 760px) { .pen-account-settings-content { padding: 20px; } }
+
+/* Account pages */
+.pen-account-heading { margin-bottom: 22px; }
+.pen-account-page { max-width: 680px; display: grid; gap: 16px; }
+.pen-account-page .pen-account-card { max-width: none; }
+.pen-profile-summary { display: flex; align-items: center; gap: 18px; min-width: 0; padding: 22px 24px; border: 1px solid var(--pen-line); border-radius: 12px; background: white; }
+.pen-profile-avatar { display: grid; place-items: center; flex: 0 0 60px; width: 60px; height: 60px; border-radius: 18px; background: #e8e7ff; color: #4338ca; font-size: 23px; font-weight: 700; }
+.pen-profile-identity { min-width: 0; }
+.pen-profile-identity h2 { margin: 0 0 6px; color: var(--pen-ink); font-size: 19px; font-weight: 600; overflow-wrap: anywhere; }
+.pen-profile-identity p { margin: 0; color: var(--pen-text); font-size: 13px; overflow-wrap: anywhere; }
+.pen-settings-list { gap: 12px; }
+.pen-settings-row { display: flex; align-items: center; gap: 16px; min-width: 0; padding: 20px 24px; border: 1px solid var(--pen-line); border-radius: 12px; background: white; }
+.pen-settings-row > div:not(.pen-theme-selector) { flex: 1; min-width: 0; }
+.pen-settings-row h2 { margin: 0 0 5px; color: var(--pen-ink); font-size: 15px; font-weight: 600; }
+.pen-settings-row p { margin: 0; color: var(--pen-text); font-size: 13px; line-height: 1.5; }
+.pen-settings-row > .pen-button { flex-shrink: 0; }
+.pen-account-trigger:hover { background: var(--pen-bg); border-color: var(--pen-line); }
+.pen-account-trigger:focus-visible, .pen-account-dropdown :is(a, button):focus-visible { outline: 2px solid var(--pen-purple); outline-offset: 2px; }
+html[data-theme="dark"] .pen-app :is(.pen-profile-summary, .pen-settings-row) { background: #1d293b; border-color: var(--pen-line); }
+html[data-theme="dark"] .pen-app :is(.pen-profile-identity h2, .pen-settings-row h2) { color: #edf2fa; }
+html[data-theme="dark"] .pen-app .pen-profile-avatar { background: #35315f; color: #d1ccff; }
+@media (max-width: 760px) {
+    .pen-profile-summary { padding: 18px; gap: 14px; }
+    .pen-profile-avatar { width: 52px; height: 52px; flex-basis: 52px; border-radius: 15px; }
+    .pen-settings-row { flex-wrap: wrap; gap: 12px; padding: 18px; }
+    .pen-settings-row > div:not(.pen-theme-selector) { flex-basis: calc(100% - 64px); }
+    .pen-settings-row > .pen-button, .pen-settings-row > .pen-settings-theme { margin-left: 52px; }
+}
 @media (max-width: 760px) { .pen-auth { max-width: 100%; } }

@@ -73,6 +73,7 @@ public sealed class AccountController(UserManager<ApplicationUser> users, SignIn
     {
         var user = await users.GetUserAsync(User);
         if (user is null) return Challenge();
+        ViewData["SavedDisplayName"] = user.DisplayName;
         return View(new ProfileViewModel { Email = user.Email ?? string.Empty, DisplayName = user.DisplayName });
     }
 
@@ -83,6 +84,7 @@ public sealed class AccountController(UserManager<ApplicationUser> users, SignIn
         var user = await users.GetUserAsync(User);
         if (user is null) return Challenge();
         model.Email = user.Email ?? string.Empty;
+        ViewData["SavedDisplayName"] = user.DisplayName;
         if (!ModelState.IsValid) return View(model);
 
         user.DisplayName = string.IsNullOrWhiteSpace(model.DisplayName) ? null : model.DisplayName.Trim();

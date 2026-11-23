@@ -2,8 +2,23 @@
     ViewData["Title"] = "Hesap Ayarları";
     ViewData["PenPage"] = "account";
 }
-<div class="pen-heading"><div><h1>Hesap Ayarları</h1><p>Hesap ve güvenlik tercihlerini burada yönetebilirsin.</p></div></div>
-<section class="pen-form-card pen-account-card" aria-labelledby="settings-heading">
-    <header><span class="pen-form-icon"><partial name="_PenIcon" model='"progress"' /></span><div><h2 id="settings-heading">Hesap güvenliği</h2><p>Oturum açma bilgilerini yönet.</p></div></header>
-    <div class="pen-account-settings-content"><p>Parola değiştirme bu aşamada kullanıma açık değildir.</p><a class="pen-button pen-secondary" asp-action="Profile">Profil bilgilerine dön</a></div>
-</section>
+<div class="pen-heading pen-account-heading"><div><h1>Hesap Ayarları</h1><p>Hesap bilgilerini ve görünüm tercihini yönet.</p></div></div>
+<div class="pen-account-page pen-settings-list">
+    <section class="pen-settings-row" aria-labelledby="settings-profile">
+        <span class="pen-form-icon"><partial name="_PenIcon" model='"edit"' /></span>
+        <div><h2 id="settings-profile">Profil Bilgileri</h2><p>Görünen adını ve e-posta adresini görüntüle.</p></div>
+        <a class="pen-button pen-secondary" asp-action="Profile">Profilim</a>
+    </section>
+    <section class="pen-settings-row" aria-labelledby="settings-heading">
+        <span class="pen-form-icon"><partial name="_PenIcon" model='"progress"' /></span>
+        <div><h2 id="settings-heading">Güvenlik</h2><p>Oturumun güvenli bir çerezle korunur.</p></div>
+    </section>
+    <section class="pen-settings-row" aria-labelledby="settings-preferences">
+        <span class="pen-form-icon"><partial name="_PenIcon" model='"sun"' /></span>
+        <div><h2 id="settings-preferences">Tercihler</h2><p>Uygulamanın temasını seç.</p></div>
+        <div class="pen-theme-selector pen-settings-theme" role="group" aria-label="Tema seçimi" data-theme-selector hidden>
+            <button type="button" data-theme-choice="light" aria-label="Açık tema" aria-pressed="false"><partial name="_PenIcon" model='"sun"' /></button>
+            <button type="button" data-theme-choice="dark" aria-label="Koyu tema" aria-pressed="false"><partial name="_PenIcon" model='"moon"' /></button>
+        </div>
+    </section>
+</div>

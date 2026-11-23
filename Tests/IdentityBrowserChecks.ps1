@@ -37,8 +37,15 @@ try {
     Check (Eval '(()=>{const s=document.querySelector(".pen-account-menu summary");return s?.tagName==="SUMMARY"&&s.tabIndex===0})()') 'avatar summary is a native keyboard focus target in the tab sequence'
     Check (Eval '(()=>{const s=document.querySelector(".pen-account-menu summary");s.focus();return document.activeElement===s})()') 'avatar menu summary receives keyboard focus'
     Check (Eval '(()=>{const s=document.querySelector(".pen-account-menu summary"),d=document.querySelector(".pen-account-menu");s.click();return d.open})()') 'native avatar control opens the menu'
+    Eval 'document.querySelector(".pen-account-menu a").focus()'|Out-Null
+    Cdp 'Input.dispatchKeyEvent' @{type='keyDown';key='Escape';code='Escape';windowsVirtualKeyCode=27}|Out-Null
+    Check (Eval '(()=>{const d=document.querySelector(".pen-account-menu");return !d.open&&document.activeElement===d.querySelector("summary")})()') 'Escape closes the account menu and restores focus'
+    Check (Eval '(()=>{const d=document.querySelector(".pen-account-menu");d.querySelector("summary").click();document.querySelector("main").click();return !d.open})()') 'outside click closes the account menu'
     OpenPage '/Account/Profile'
     Check (Eval '(()=>{const f=document.querySelector(".pen-account-card form"),n=f?.querySelector("#DisplayName"),e=f?.querySelector("#profile-email");return !!f&&f.method==="post"&&!!f.querySelector("[name=__RequestVerificationToken]")&&n?.maxLength===80&&e?.readOnly===true&&e.type==="email"})()') 'profile form validates visible name and keeps email read-only'
+    Eval '(()=>{const n=document.querySelector("#DisplayName");sessionStorage.setItem("qa-saved-name",n.value);n.value="Unsaved browser draft";document.querySelector(".pen-account-card form a[href=\"/Account/Profile\"]").click()})()'|Out-Null
+    WaitPage
+    Check (Eval 'location.pathname==="/Account/Profile"&&document.querySelector("#DisplayName").value===sessionStorage.getItem("qa-saved-name")') 'profile Cancel restores the saved display name'
     foreach($width in @(1440,768,390,320)) {
         Cdp 'Emulation.setDeviceMetricsOverride' @{width=$width;height=900;deviceScaleFactor=1;mobile=$false}|Out-Null
         foreach($theme in @('light','dark')) {
@@ -47,7 +54,13 @@ try {
         }
     }
     OpenPage '/Account/Settings'
-    Check (Eval '!!document.querySelector("#settings-heading")&&!document.querySelector("input[type=password]")') 'settings provides a basic page without password change controls'
+    Check (Eval '!!document.querySelector("main #settings-heading")&&!!document.querySelector("main a[href=\"/Account/Profile\"]")&&!document.querySelector("main input[type=password]")') 'settings links to the profile without introducing password controls'
+    foreach($width in @(1440,768,390,320)) {
+        Cdp 'Emulation.setDeviceMetricsOverride' @{width=$width;height=900;deviceScaleFactor=1;mobile=$false}|Out-Null
+        foreach($theme in @('light','dark')) {
+            Check (Eval ('(()=>{const b=document.querySelector("main [data-theme-choice='+$theme+']");if(!b?.getBoundingClientRect().width)return false;b.click();return document.documentElement.dataset.theme==="'+$theme+'"&&b.getAttribute("aria-pressed")==="true"&&document.documentElement.scrollWidth<=innerWidth})()')) "settings applies the theme and fits at $width px $theme"
+        }
+    }
     Cdp 'Emulation.setDeviceMetricsOverride' @{width=390;height=900;deviceScaleFactor=1;mobile=$false}|Out-Null
     Cdp 'Emulation.setScriptExecutionDisabled' @{value=$true}|Out-Null
     OpenPage '/Tasks?view=list'

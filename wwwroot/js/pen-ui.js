@@ -41,6 +41,19 @@
             if (!navigation.hidden && !event.target.closest('.pen-mobile-header')) closeMenu();
         });
     }
+    const accountMenu = document.querySelector('.pen-account-menu');
+    if (accountMenu) {
+        const trigger = accountMenu.querySelector('summary');
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && accountMenu.open) {
+                accountMenu.open = false;
+                trigger.focus();
+            }
+        });
+        document.addEventListener('click', event => {
+            if (accountMenu.open && !accountMenu.contains(event.target)) accountMenu.open = false;
+        });
+    }
     const dialog = document.getElementById('delete-confirmation');
     if (dialog && typeof dialog.showModal === 'function') {
         let pendingForm = null;

@@ -106,7 +106,9 @@ internal static class AuthenticationChecks
                 using var settings = await session.Client.GetAsync("/Account/Settings");
                 var profileHtml = await profile.Content.ReadAsStringAsync(); var settingsHtml = await settings.Content.ReadAsStringAsync();
                 Check(profile.IsSuccessStatusCode && profile.Headers.CacheControl?.NoStore == true && profileHtml.Contains(ownEmail) && !profileHtml.Contains(foreignEmail), "profile shows only the signed-in user's email and is not cached");
-                Check(settings.IsSuccessStatusCode && settings.Headers.CacheControl?.NoStore == true && settingsHtml.Contains("Parola değiştirme bu aşamada kullanıma açık değildir.") && !settingsHtml.Contains("type=\"password\""), "account settings is available without exposing a password-change form");
+                Check(settings.IsSuccessStatusCode && settings.Headers.CacheControl?.NoStore == true &&
+                    settingsHtml.Contains("href=\"/Account/Profile\"") && settingsHtml.Contains("data-theme-choice=\"dark\"") &&
+                    !settingsHtml.Contains("type=\"password\""), "account settings exposes profile and theme controls without a password-change form");
             }
             using (var missingProfileCsrf = await Post(a, "/Account/Profile", new() { ["DisplayName"] = "csrf test" }, csrf: false))
                 Check(missingProfileCsrf.StatusCode == HttpStatusCode.BadRequest, "profile update rejects a missing antiforgery token");
@@ -116,6 +118,7 @@ internal static class AuthenticationChecks
             {
                 var html = WebUtility.HtmlDecode(await refreshedProfile.Content.ReadAsStringAsync());
                 Check(html.Contains("value=\"QA Görünen Ad\"") && html.Contains(emailA) && !html.Contains(emailB), "profile shows the trimmed display name and the original read-only email");
+                Check(html.Contains("Görünen adınız güncellendi."), "profile update shows Turkish success feedback");
             }
             using (var db = open())
             {

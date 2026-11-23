@@ -2,17 +2,27 @@
 @{
     ViewData["Title"] = "Profilim";
     ViewData["PenPage"] = "account";
+    var savedName = ViewData["SavedDisplayName"] as string;
+    var profileName = string.IsNullOrWhiteSpace(savedName) ? "Kullanıcı" : savedName.Trim();
+    var initial = string.IsNullOrWhiteSpace(savedName) && !string.IsNullOrWhiteSpace(Model.Email)
+        ? Model.Email[..1].ToUpperInvariant() : profileName[..1].ToUpperInvariant();
 }
-<div class="pen-heading"><div><h1>Profilim</h1><p>Hesap bilgilerini görüntüle ve görünen adını düzenle.</p></div></div>
+<div class="pen-heading pen-account-heading"><div><h1>Profilim</h1><p>Hesap bilgilerini görüntüle ve görünen adını düzenle.</p></div></div>
 <partial name="_PenFeedback" />
-<section class="pen-form-card pen-account-card" aria-labelledby="profile-heading">
-    <header><span class="pen-form-icon"><partial name="_PenIcon" model='"edit"' /></span><div><h2 id="profile-heading">Kişisel bilgiler</h2><p>E-posta adresin hesap giriş bilgindir.</p></div></header>
-    <form asp-action="Profile" method="post" novalidate>
-        <div class="pen-form-fields">
-            @if (ViewData.ModelState[string.Empty]?.Errors.Count > 0) { <div asp-validation-summary="ModelOnly" class="pen-notice pen-notice-error" role="alert"></div> }
-            <div class="pen-field"><label asp-for="DisplayName">Görünen ad</label><input asp-for="DisplayName" autocomplete="nickname" maxlength="80" aria-describedby="display-name-error" aria-invalid="@(ViewData.ModelState[nameof(Model.DisplayName)]?.Errors.Count > 0 ? "true" : "false")" /><span id="display-name-error" asp-validation-for="DisplayName" class="pen-field-error"></span></div>
-            <div class="pen-field"><label for="profile-email">E-posta</label><input id="profile-email" value="@Model.Email" type="email" readonly aria-describedby="profile-email-help" /><span id="profile-email-help" class="pen-field-hint">E-posta adresi bu sayfadan değiştirilemez.</span></div>
-        </div>
-        <div class="pen-form-actions"><a class="pen-button pen-secondary" asp-controller="Tasks" asp-action="Index">İptal</a><button class="pen-button pen-primary" type="submit">Değişiklikleri kaydet</button></div>
-    </form>
-</section>
+<div class="pen-account-page">
+    <section class="pen-profile-summary" aria-label="Profil özeti">
+        <span class="pen-profile-avatar" aria-hidden="true">@initial</span>
+        <div class="pen-profile-identity"><h2 data-profile-saved-name>@profileName</h2><p>@Model.Email</p></div>
+    </section>
+    <section class="pen-form-card pen-account-card" aria-labelledby="profile-heading">
+        <header><span class="pen-form-icon"><partial name="_PenIcon" model='"edit"' /></span><div><h2 id="profile-heading">Kişisel bilgiler</h2><p>Görünen adını güncelle.</p></div></header>
+        <form asp-action="Profile" method="post" novalidate>
+            <div class="pen-form-fields">
+                @if (ViewData.ModelState[string.Empty]?.Errors.Count > 0) { <div asp-validation-summary="ModelOnly" class="pen-notice pen-notice-error" role="alert"></div> }
+                <div class="pen-field"><label asp-for="DisplayName">Görünen ad</label><input asp-for="DisplayName" autocomplete="nickname" maxlength="80" aria-describedby="display-name-error" aria-invalid="@(ViewData.ModelState[nameof(Model.DisplayName)]?.Errors.Count > 0 ? "true" : "false")" /><span id="display-name-error" asp-validation-for="DisplayName" class="pen-field-error"></span></div>
+                <div class="pen-field"><label for="profile-email">E-posta</label><input id="profile-email" value="@Model.Email" type="email" readonly aria-describedby="profile-email-help" /><span id="profile-email-help" class="pen-field-hint">E-posta adresi bu sayfadan değiştirilemez.</span></div>
+            </div>
+            <div class="pen-form-actions"><a class="pen-button pen-secondary" asp-action="Profile" data-profile-cancel>İptal</a><button class="pen-button pen-primary" type="submit">Değişiklikleri kaydet</button></div>
+        </form>
+    </section>
+</div>
