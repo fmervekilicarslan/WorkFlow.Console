@@ -35,6 +35,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     options.Lockout.AllowedForNewUsers = true;
 }).AddEntityFrameworkStores<WorkFlowDbContext>()
     .AddErrorDescriber<TurkishIdentityErrorDescriber>()
+    .AddClaimsPrincipalFactory<ProfileClaimsPrincipalFactory>()
     .AddDefaultTokenProviders();
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -80,6 +81,6 @@ app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Tasks}/{action=Index}/{id?}");
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();

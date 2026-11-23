@@ -33,6 +33,7 @@ internal static class AuthenticationChecks
         var originalUsers = JsonSerializer.Serialize(await beforeDb.Users.AsNoTracking().OrderBy(u => u.Id).ToListAsync());
         var marker = "AUTH-" + Guid.NewGuid().ToString("N");
         var emailA = marker.ToLowerInvariant() + "-a@example.invalid"; var emailB = marker.ToLowerInvariant() + "-b@example.invalid";
+        var browserEmail = marker.ToLowerInvariant() + "-browser@example.invalid";
         var secret = "Qa!9zA" + Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
         var loginFailure = "Giriş yapılamadı. Bilgilerinizi kontrol edin veya bir süre sonra tekrar deneyin.";
         using var anonymous = host.CreateSession(); using var a = host.CreateSession(); using var b = host.CreateSession();
@@ -45,12 +46,20 @@ internal static class AuthenticationChecks
         Dictionary<string, string> Credentials(string email, string password) => new() { ["Email"] = email, ["Password"] = password };
         try
         {
-            foreach (var path in new[] { "/", "/Tasks?view=list", "/Tasks?view=board", "/Tasks/Create", "/Tasks/Details/" + Guid.NewGuid(), "/Tasks/Edit/" + Guid.NewGuid(), "/Calendar?view=month", "/Calendar?view=week", "/Calendar?view=day", "/Account/Profile", "/Account/Settings" })
+            using (var home = await anonymous.Client.GetAsync("/"))
+            {
+                var html = await home.Content.ReadAsStringAsync();
+                Check(home.IsSuccessStatusCode && home.Headers.CacheControl?.NoStore == true &&
+                    html.Contains("pen-welcome-features") && html.Contains("/Account/Login") && html.Contains("/Account/Register") &&
+                    !html.Contains("data-board-card") && !html.Contains("data-list-task") && !html.Contains(emailA),
+                    "anonymous home presents features and public links without task or account data");
+            }
+            foreach (var path in new[] { "/Tasks?view=list", "/Tasks?view=board", "/Tasks/Create", "/Tasks/Details/" + Guid.NewGuid(), "/Tasks/Edit/" + Guid.NewGuid(), "/Calendar?view=month", "/Calendar?view=week", "/Calendar?view=day", "/Account/Profile", "/Account/Settings", "/Account/Photo/" + Guid.NewGuid() })
             {
                 using var response = await anonymous.Client.GetAsync(path);
                 Check(LoginChallenge(response), "anonymous protected GET requires same-origin login: " + path.Split('?')[0]);
             }
-            foreach (var action in new[] { "/Tasks/Create", "/Tasks/Edit/" + Guid.NewGuid(), "/Tasks/Delete", "/Tasks/UpdateStatus", "/Tasks/UpdateBoardStatus", "/Account/Logout", "/Account/Profile", "/Account/ChangePassword" })
+            foreach (var action in new[] { "/Tasks/Create", "/Tasks/Edit/" + Guid.NewGuid(), "/Tasks/Delete", "/Tasks/UpdateStatus", "/Tasks/UpdateBoardStatus", "/Account/Logout", "/Account/Profile", "/Account/ChangePassword", "/Account/UploadPhoto", "/Account/RemovePhoto" })
             {
                 using var response = await Post(anonymous, action, new() { ["gorevId"] = Guid.NewGuid().ToString(), ["yeniDurum"] = "1" });
                 Check(LoginChallenge(response), "anonymous protected POST requires same-origin login: " + action.Split('/')[2]);
@@ -113,19 +122,21 @@ internal static class AuthenticationChecks
             }
             using (var missingProfileCsrf = await Post(a, "/Account/Profile", new() { ["DisplayName"] = "csrf test" }, csrf: false))
                 Check(missingProfileCsrf.StatusCode == HttpStatusCode.BadRequest, "profile update rejects a missing antiforgery token");
-            using (var updateProfile = await Post(a, "/Account/Profile", new() { ["DisplayName"] = "  QA Görünen Ad  ", ["Email"] = emailB }, tokenPath: "/Account/Profile"))
+            using (var updateProfile = await Post(a, "/Account/Profile", new() { ["DisplayName"] = "  QA Görünen Ad  ", ["AboutMe"] = "  QA kısa biyografi  ", ["Email"] = emailB }, tokenPath: "/Account/Profile"))
                 Check(updateProfile.StatusCode == HttpStatusCode.Redirect && updateProfile.Headers.Location?.ToString() == "/Account/Profile", "profile update accepts the display name but ignores a forged email");
             using (var refreshedProfile = await a.Client.GetAsync("/Account/Profile"))
             {
                 var html = WebUtility.HtmlDecode(await refreshedProfile.Content.ReadAsStringAsync());
                 Check(html.Contains("value=\"QA Görünen Ad\"") && html.Contains(emailA) && !html.Contains(emailB), "profile shows the trimmed display name and the original read-only email");
-                Check(html.Contains("Görünen adınız güncellendi."), "profile update shows Turkish success feedback");
+                Check(html.Contains("Profiliniz güncellendi.") && html.Contains("QA kısa biyografi") && html.Contains("<time datetime="), "profile shows Turkish success, bio and registration date");
             }
             using (var db = open())
             {
                 var savedA = await db.Users.AsNoTracking().SingleAsync(u => u.Id == ownerA);
                 var savedB = await db.Users.AsNoTracking().SingleAsync(u => u.Id == ownerB);
-                Check(savedA.DisplayName == "QA Görünen Ad" && savedA.Email == emailA && savedB.DisplayName is null, "profile update changes only the current user's display name");
+                Check(savedA.DisplayName == "QA Görünen Ad" && savedA.AboutMe == "QA kısa biyografi" &&
+                    savedA.JoinedAtUtc is not null && savedA.Email == emailA && savedB.DisplayName is null && savedB.AboutMe is null,
+                    "profile changes only the authenticated user's editable fields");
             }
             using (var tooLongProfile = await Post(a, "/Account/Profile", new() { ["DisplayName"] = new string('x', 81) }, tokenPath: "/Account/Profile"))
             {
@@ -133,6 +144,51 @@ internal static class AuthenticationChecks
                 Check(tooLongProfile.StatusCode == HttpStatusCode.OK && html.Contains("Görünen ad en fazla 80 karakter olabilir."), "overlong display name gets a Turkish validation error");
             }
             using (var db = open()) Check((await db.Users.AsNoTracking().SingleAsync(u => u.Id == ownerA)).DisplayName == "QA Görünen Ad", "invalid profile update preserves the saved display name");
+            using (var longBio = await Post(a, "/Account/Profile", new() { ["AboutMe"] = new string('x', 241) }, tokenPath: "/Account/Profile"))
+                Check(longBio.StatusCode == HttpStatusCode.OK && WebUtility.HtmlDecode(await longBio.Content.ReadAsStringAsync())
+                    .Contains("Hakkımda en fazla 240 karakter olabilir."), "server validates the bio length");
+
+            async Task<HttpResponseMessage> Upload(byte[] content, bool csrf = true)
+            {
+                using var form = new MultipartFormDataContent();
+                using var file = new ByteArrayContent(content);
+                file.Headers.ContentType = new("image/png");
+                form.Add(file, "photo", "untrusted-name.png");
+                if (csrf) form.Add(new StringContent(await Token(a, "/Account/Profile")), "__RequestVerificationToken");
+                return await a.Client.PostAsync("/Account/UploadPhoto", form);
+            }
+            using (var noCsrf = await Upload("<script>invalid</script>"u8.ToArray(), csrf: false))
+                Check(noCsrf.StatusCode == HttpStatusCode.BadRequest, "photo upload requires CSRF");
+            using (var noCsrf = await Post(a, "/Account/RemovePhoto", new(), csrf: false))
+                Check(noCsrf.StatusCode == HttpStatusCode.BadRequest, "photo removal requires CSRF");
+            using (var fake = await Upload("<script>invalid</script>"u8.ToArray()))
+                Check(fake.StatusCode == HttpStatusCode.Redirect && WebUtility.HtmlDecode(await a.Client.GetStringAsync("/Account/Profile"))
+                    .Contains("geçerli bir JPEG veya PNG"), "declared PNG with invalid content is rejected");
+            using (var large = await Upload(new byte[2 * 1024 * 1024 + 1]))
+                Check(large.StatusCode == HttpStatusCode.Redirect && WebUtility.HtmlDecode(await a.Client.GetStringAsync("/Account/Profile"))
+                    .Contains("En fazla 2 MB"), "photo file limit rejects a file over 2 MiB");
+            Guid photoKey;
+            using (var surface = SkiaSharp.SKSurface.Create(new SkiaSharp.SKImageInfo(12, 12)))
+            {
+                surface.Canvas.Clear(SkiaSharp.SKColors.CornflowerBlue);
+                using var image = surface.Snapshot();
+                using var bytes = image.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100);
+                using var uploaded = await Upload(bytes.ToArray());
+                Check(uploaded.StatusCode == HttpStatusCode.Redirect, "valid PNG uploads through the authenticated action");
+                using var db = open();
+                var updated = await db.Users.AsNoTracking().SingleAsync(u => u.Id == ownerA);
+                Check(updated.PhotoKey is not null && updated.PhotoData is [255, 216, ..], "PostgreSQL stores a generated key and normalized JPEG bytes");
+                photoKey = updated.PhotoKey!.Value;
+            }
+            using (var photo = await a.Client.GetAsync($"/Account/Photo/{photoKey}"))
+                Check(photo.IsSuccessStatusCode && photo.Content.Headers.ContentType?.MediaType == "image/jpeg" &&
+                    photo.Headers.CacheControl?.NoStore == true && photo.Headers.Contains("X-Content-Type-Options"),
+                    "owner photo is served as private non-sniffable JPEG");
+            using (var foreignPhoto = await b.Client.GetAsync($"/Account/Photo/{photoKey}"))
+                Check(foreignPhoto.StatusCode == HttpStatusCode.NotFound, "another account cannot read an owner's photo key");
+            using (var removed = await Post(a, "/Account/RemovePhoto", new(), tokenPath: "/Account/Profile"))
+            using (var oldPhoto = await a.Client.GetAsync($"/Account/Photo/{photoKey}"))
+                Check(removed.StatusCode == HttpStatusCode.Redirect && oldPhoto.StatusCode == HttpStatusCode.NotFound, "removal invalidates the old photo key");
             foreach (var badReturn in new[] { "https://untrusted.example/", "//untrusted.example/", "/\\untrusted.example/", "\\untrusted.example/" })
             {
                 using var session = host.CreateSession(); var fields = Credentials(emailA, secret); fields["ReturnUrl"] = badReturn;
@@ -324,13 +380,17 @@ internal static class AuthenticationChecks
             using (var response = await a.Client.GetAsync("/Account/Logout")) Check(response.StatusCode == HttpStatusCode.MethodNotAllowed, "logout is not available through GET");
             using (var response = await Post(a, "/Account/Logout", new(), csrf: false)) Check(response.StatusCode == HttpStatusCode.BadRequest, "logout rejects missing antiforgery token");
             using (var stillSignedIn = await a.Client.GetAsync("/Tasks")) Check(stillSignedIn.StatusCode == HttpStatusCode.OK, "rejected logout preserves authenticated session");
-            using (var response = await Post(a, "/Account/Logout", new(), tokenPath: "/Tasks/Create")) Check(response.StatusCode == HttpStatusCode.Redirect, "valid antiforgery POST signs the user out");
+            using (var response = await Post(a, "/Account/Logout", new(), tokenPath: "/Tasks/Create"))
+                Check(response.StatusCode == HttpStatusCode.Redirect && response.Headers.Location?.ToString() == "/", "valid antiforgery POST signs out and returns home");
             using (var protectedAfterLogout = await a.Client.GetAsync("/Tasks")) Check(LoginChallenge(protectedAfterLogout), "signed-out session can no longer access tasks");
             if (Environment.GetEnvironmentVariable("WORKFLOW_BROWSER_CHECKS") == "1")
             {
                 var start = new ProcessStartInfo("powershell") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
                 foreach (var argument in new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", Path.Combine(Directory.GetCurrentDirectory(), "Tests", "IdentityBrowserChecks.ps1"), "-BaseUrl", host.BaseUri.ToString().TrimEnd('/') }) start.ArgumentList.Add(argument);
                 host.ConfigureBrowser(start, b);
+                start.Environment["WORKFLOW_BROWSER_LOGIN_EMAIL"] = emailB;
+                start.Environment["WORKFLOW_BROWSER_REGISTER_EMAIL"] = browserEmail;
+                start.Environment["WORKFLOW_BROWSER_PASSWORD"] = secret;
                 using var process = Process.Start(start)!; var output = process.StandardOutput.ReadToEndAsync(); var error = process.StandardError.ReadToEndAsync();
                 await process.WaitForExitAsync(); var stdout = await output; Console.Write(stdout);
                 if (process.ExitCode != 0) throw new InvalidOperationException("Identity browser checks failed: " + await error);
@@ -341,7 +401,7 @@ internal static class AuthenticationChecks
         {
             using var db = open();
             await db.Tasks.Where(t => t.Title.StartsWith(marker)).ExecuteDeleteAsync();
-            await db.Users.Where(u => u.Email == emailA || u.Email == emailB).ExecuteDeleteAsync();
+            await db.Users.Where(u => u.Email == emailA || u.Email == emailB || u.Email == browserEmail).ExecuteDeleteAsync();
         }
         Check(await Snapshot() == original, "all original tasks preserved after owned authentication fixtures are cleaned");
         using (var db = open()) Check(JsonSerializer.Serialize(await db.Users.AsNoTracking().OrderBy(u => u.Id).ToListAsync()) == originalUsers, "all original Identity users preserved after owned authentication fixtures are cleaned");

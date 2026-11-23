@@ -527,3 +527,36 @@ html[data-theme="dark"] .pen-app .pen-profile-avatar { background: #35315f; colo
     .pen-settings-row > .pen-button, .pen-settings-row > .pen-settings-theme { margin-left: 52px; }
 }
 @media (max-width: 760px) { .pen-auth { max-width: 100%; } }
+
+/* Welcome and profile */
+.pen-account-avatar img, .pen-profile-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.pen-photo-remove { padding: 0 28px 24px; }
+.pen-welcome { min-height: 100vh; background: #f6f7fb; color: #20263a; }
+.pen-welcome-header { max-width: 1200px; margin: auto; min-height: 80px; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.pen-welcome-nav, .pen-welcome-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pen-welcome-login { color: inherit; font-weight: 600; font-size: 14px; padding: 10px; }
+.pen-welcome-main { max-width: 1200px; margin: auto; padding: 32px 32px 80px; }
+.pen-welcome-hero { padding: 78px 0 70px; max-width: 730px; }
+.pen-welcome-eyebrow { color: #6259d8; font-size: 12px; letter-spacing: .12em; font-weight: 700; }
+.pen-welcome-hero h1 { margin: 12px 0 18px; font-size: clamp(36px, 5vw, 60px); line-height: 1.08; letter-spacing: -.035em; }
+.pen-welcome-hero > p:not(.pen-welcome-eyebrow) { color: #586276; font-size: 18px; line-height: 1.6; max-width: 570px; }
+.pen-welcome-actions { margin-top: 28px; }
+.pen-welcome-features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.pen-welcome-features article { border: 1px solid #e1e5ee; border-radius: 12px; padding: 24px; background: white; }
+.pen-welcome-features h2 { font-size: 17px; margin: 18px 0 8px; }
+.pen-welcome-features p { color: #586276; line-height: 1.55; margin: 0; font-size: 14px; }
+html[data-theme="dark"] .pen-welcome { background: #111827; color: #edf2fa; }
+html[data-theme="dark"] .pen-welcome-features article { background: #1d293b; border-color: #39465b; }
+html[data-theme="dark"] .pen-welcome-hero > p:not(.pen-welcome-eyebrow), html[data-theme="dark"] .pen-welcome-features p { color: #b0bdd2; }
+html[data-theme="dark"] .pen-welcome-eyebrow { color: #b7b1ff; }
+.pen-welcome a:focus-visible, .pen-welcome button:focus-visible { outline: 2px solid #8078ee; outline-offset: 3px; }
+@media (max-width: 760px) {
+    .pen-welcome-header { padding: 16px; align-items: flex-start; }
+    .pen-welcome-nav { justify-content: flex-end; gap: 6px; }
+    .pen-welcome-main { padding: 16px 16px 48px; }
+    .pen-welcome-hero { padding: 48px 0; }
+    .pen-welcome-hero > p:not(.pen-welcome-eyebrow) { font-size: 16px; }
+    .pen-welcome-features { grid-template-columns: 1fr; }
+    .pen-photo-remove { padding: 0 20px 20px; }
+}
+.pen-mobile-account { display: flex; align-items: center; gap: 8px; min-width: 0; }

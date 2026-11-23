@@ -13,6 +13,7 @@ public class WorkFlowDbContext(DbContextOptions<WorkFlowDbContext> options) : Id
         base.OnModelCreating(modelBuilder);
         modelBuilder.HasSequence<long>("TaskCodeSequence").StartsAt(1).IncrementsBy(1);
         modelBuilder.Entity<ApplicationUser>().Property(user => user.DisplayName).HasMaxLength(80);
+        modelBuilder.Entity<ApplicationUser>().Property(user => user.AboutMe).HasMaxLength(240);
         modelBuilder.Entity<TaskItem>(task =>
         {
             task.HasKey(item => item.Id);

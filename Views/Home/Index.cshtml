@@ -1,0 +1,47 @@
+﻿@{
+    Layout = null;
+    var signedIn = User.Identity?.IsAuthenticated == true;
+}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WorkFlow — İşlerini net bir şekilde takip et</title>
+    <script>try { const saved = localStorage.getItem('workflow-theme'); document.documentElement.dataset.theme = saved === 'light' || saved === 'dark' ? saved : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); } catch {}</script>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pen.css" asp-append-version="true" />
+</head>
+<body class="pen-app pen-welcome">
+    <a class="pen-skip" href="#main-content">İçeriğe geç</a>
+    <partial name="_PenIcons" />
+    <header class="pen-welcome-header">
+        <a class="pen-brand" asp-controller="Home" asp-action="Index"><span><partial name="_PenIcon" model='"workflow"' /></span>WorkFlow</a>
+        <nav aria-label="Hesap" class="pen-welcome-nav">
+            <div class="pen-theme-selector" role="group" aria-label="Tema seçimi" data-theme-selector hidden>
+                <button type="button" data-theme-choice="light" aria-label="Açık tema" aria-pressed="false"><partial name="_PenIcon" model='"sun"' /></button>
+                <button type="button" data-theme-choice="dark" aria-label="Koyu tema" aria-pressed="false"><partial name="_PenIcon" model='"moon"' /></button>
+            </div>
+            @if (signedIn) { <a class="pen-button pen-primary" asp-controller="Tasks" asp-action="Index">Çalışma alanına geç</a> }
+            else { <a class="pen-welcome-login" asp-controller="Account" asp-action="Login">Giriş yap</a><a class="pen-button pen-primary" asp-controller="Account" asp-action="Register">Kayıt ol</a> }
+        </nav>
+    </header>
+    <main id="main-content" class="pen-welcome-main">
+        <section class="pen-welcome-hero">
+            <p class="pen-welcome-eyebrow">WORKFLOW</p>
+            <h1>İşlerini net bir şekilde takip et.</h1>
+            <p>Görevlerini düzenle, ilerlemeni gör ve önemli tarihlere tek bir yerden ulaş.</p>
+            <div class="pen-welcome-actions">
+                @if (signedIn) { <a class="pen-button pen-primary" asp-controller="Tasks" asp-action="Index">Görevlerime git</a> }
+                else { <a class="pen-button pen-primary" asp-controller="Account" asp-action="Register">Hesap oluştur</a><a class="pen-button pen-secondary" asp-controller="Account" asp-action="Login">Giriş yap</a> }
+            </div>
+        </section>
+        <section class="pen-welcome-features" aria-label="WorkFlow özellikleri">
+            <article><span class="pen-form-icon"><partial name="_PenIcon" model='"list"' /></span><h2>Görev listesi</h2><p>İşlerini öncelik ve durumlarına göre düzenle, aradığını hızlıca bul.</p></article>
+            <article><span class="pen-form-icon"><partial name="_PenIcon" model='"layers"' /></span><h2>Kanban pano</h2><p>Görevleri sütunlar arasında taşıyarak ilerlemeyi takip et.</p></article>
+            <article><span class="pen-form-icon"><partial name="_PenIcon" model='"clipboard"' /></span><h2>Takvim</h2><p>Teslim tarihlerini ay, hafta ve gün görünümünde incele.</p></article>
+        </section>
+    </main>
+    <script src="~/js/pen-ui.js" asp-append-version="true" defer></script>
+</body>
+</html>

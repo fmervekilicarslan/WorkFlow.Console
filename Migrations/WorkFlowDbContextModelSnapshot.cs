@@ -161,6 +161,10 @@ namespace WorkFlow.Mvc.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("text");
 
+                    b.Property<string>("AboutMe")
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("integer");
 
@@ -178,6 +182,9 @@ namespace WorkFlow.Mvc.Migrations
 
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("JoinedAtUtc")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
@@ -201,6 +208,12 @@ namespace WorkFlow.Mvc.Migrations
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
+
+                    b.Property<byte[]>("PhotoData")
+                        .HasColumnType("bytea");
+
+                    b.Property<Guid?>("PhotoKey")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");

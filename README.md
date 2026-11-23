@@ -1,132 +1,87 @@
-# WorkFlow – Task Management Application
+# WorkFlow.Mvc
 
-WorkFlow, görevlerin oluşturulmasını, listelenmesini ve yönetilmesini sağlayan, **C# ve ASP.NET Core MVC** kullanılarak geliştirilmiş bir görev yönetimi uygulamasıdır.
+WorkFlow, kişisel işleri planlamak ve takip etmek için geliştirilmiş bir ASP.NET Core MVC uygulamasıdır. Aynı görevleri Liste, Kanban ve Takvim üzerinden yönetebilirsiniz.
 
-Bu proje, nesne yönelimli programlama prensiplerini ve ASP.NET Core MVC mimarisini uygulamalı olarak öğrenmek amacıyla geliştirilmektedir.
+## Mevcut özellikler
 
-## Kullanılan Teknolojiler
+| Alan | Neler yapabilirsiniz? |
+| --- | --- |
+| Başlangıç | Herkese açık ana sayfadan özellikleri inceleyebilir, kayıt olabilir veya giriş yapabilirsiniz. |
+| Görev Listesi | Görev oluşturabilir, açabilir, düzenleyebilir ve silebilirsiniz. Kalıcı WF kodu, başlık veya açıklamayla arama yapabilir; durum, öncelik, sıralama ve sayfalama kullanabilirsiniz. |
+| Kanban | **Yapılacak**, **Devam ediyor** ve **Tamamlandı** sütunlarından görev açabilir ve kart taşıyabilirsiniz. Sürükle-bırak ve durum seçicisi PostgreSQL'e kaydeder; başarısız istekte kart eski sütununa döner. |
+| Takvim | Teslim tarihlerini pazartesi başlayan **Gün**, **Hafta** ve **Ay** görünümlerinde inceleyebilirsiniz. Yoğun günlerde ek görevler açılabilir. Tarihsiz görevler ayrı listelenir. |
+| Profil ve ayarlar | Görünen ad ve Hakkımda alanını düzenleyebilir, profil fotoğrafı yükleyebilir, değiştirebilir veya kaldırabilirsiniz. Profilde kayıtlıysa üyelik tarihi görünür. Hesap Ayarları'nda parola ve tema değiştirilebilir. |
 
-- **C#**
-- **.NET 10**
-- **ASP.NET Core MVC**
-- **Razor Views**
-- **Entity Framework Core / Npgsql / PostgreSQL**
-- **HTML ve CSS**
-- **Git ve GitHub**
+Arayüz Türkçedir, açık ve koyu temayı destekler ve mobil ekranlara uyarlanır. Takvim İstanbul yerel günlerini kullanır; teslim tarihleri PostgreSQL'de UTC olarak saklanır.
 
-## Projenin Özellikleri
+## Teknolojiler ve mimari
 
-- Yeni görev oluşturma
-- Mevcut görevleri listeleme
-- Kalıcı Liste / Pano görünüm seçimi ve üç sütunlu Kanban panosu
-- Kanban kartlarında sürükle-bırak veya durum seçimiyle güvenli, kalıcı durum güncelleme
-- Görev silme
-- Görev durumunu güncelleme
-- Görevlere öncelik ve tarih bilgisi atama
-- Form doğrulama ve hata yönetimi
-- Görev detayını görüntüleme ve görev bilgilerini düzenleme
-- Başlık/açıklama araması, durum ve öncelik filtreleri
-- Sıralama ve sayfalama
-- Kalıcı, benzersiz görev kodları (`WF-001` gibi)
-- Liste, oluşturma, düzenleme, detay ve hata ekranlarında ortak responsive görünüm
-- Sistem tercihinden başlayan, kullanıcı seçimini saklayan açık/koyu tema
-- Pazartesi başlayan Gün / Hafta / Ay takvimi ve ayrı tarihsiz görev bölümü
+- **C# ve .NET 10** · ASP.NET Core MVC, Razor ve ASP.NET Core Identity
+- **PostgreSQL 17** · Entity Framework Core ve Npgsql
+- **Arayüz** · HTML, CSS, JavaScript ve WorkFlow'un Pen.dev kaynaklı bileşenleri
+- **Profil fotoğrafı** · SkiaSharp ile görüntü doğrulama ve yeniden kodlama
+- **Geliştirme** · JetBrains Rider, Docker, Git ve izole HTTPS/Chrome regresyonları
 
-Güneş/ay tema seçicisi masaüstünde üst çubuğun sağında, mobilde hamburger menüsünün yanındadır. Seçili tema mor vurguyla belirtilir; seçenekler klavyeyle kullanılabilir. Tarayıcı depolamasına erişilemiyorsa tema seçimi yalnızca açık sayfada geçerlidir. JavaScript kapalıyken mobil gezinme bağlantıları görünür kalır; form doğrulaması sunucuda çalışır.
+| Katman | Sorumluluk |
+| --- | --- |
+| Controllers | HTTP rotaları, yetki kontrolü ve ekran akışları |
+| Views ve ViewModels | Razor arayüzü, form alanları, doğrulama ve kullanıcı geri bildirimi |
+| Services | Kullanıcıya özel görev sorguları, işlem kuralları ve profil fotoğrafı işleme |
+| Models, Data ve Migrations | Identity modeli, görev eşlemeleri, PostgreSQL erişimi ve sürümlenmiş şema |
 
-Görevler sayfasındaki **Liste / Pano** bağlantılarıyla görünümü değiştirebilirsiniz. Pano, mevcut `Todo`, `InProgress`, `Completed` durumlarını **Yapılacak**, **Devam Ediyor**, **Tamamlandı** sütunlarında gösterir. Arama ve öncelik filtreleri iki görünümde de çalışır. Liste durum filtresi ve sayfalama kullanır; pano ise arama/öncelikle eşleşen tüm görevleri getirir. Listedeki durum, sayfa numarası ve sayfa boyutu panonun kapsamını daraltmaz. Pano görünümünde durum sekmeleri ve sayfalama kontrolleri gösterilmez; sütun sayaçları görüntülenen kartları sayar.
+### Identity ve görev erişimi
 
-Görünüm URL'de `view=list` veya `view=board` ile belirlenir; açık URL seçimi önceliklidir. Tarayıcıda saklanan görünüm tercihi, görünüm belirtilmeden görev sayfasına dönüldüğünde kullanılır. Depolama kullanılamıyorsa URL ve görünüm bağlantıları çalışır. Her istekte yalnız aktif görünümün görevleri sorgulanır; pano tek bir izlenmeyen (`AsNoTracking`) görev sorgusu ve ortak özet sorgusunu kullanır. Liste mevcut sayfalı sorgusunu korur. Pano tüm eşleşmeleri yüklediğinden çok büyük görev kümelerinde kart çizim maliyeti ayrıca değerlendirilmelidir.
+ASP.NET Core Identity parolaları hash olarak saklar ve HTTPS üzerinden güvenli oturum çerezi kullanır. Girişte deneme sınırlaması uygulanır. Durum değiştirme, profil güncelleme, fotoğraf işlemleri ve çıkış gibi yazma istekleri CSRF korumalıdır.
 
-Kartı başka sütuna sürükleyebilir veya karttaki durum alanını kullanabilirsiniz. Güncelleme CSRF korumalı MVC endpoint'i üzerinden mevcut `TaskService` ile PostgreSQL'e kaydedilir. Başarısız istekte kart önceki durumuna döner ve Türkçe hata gösterilir. Pano etkileşimleri JavaScript gerektirir; mevcut liste formuyla durum güncelleme kullanılmaya devam edilebilir. Kanban için yeni migration gerekmez.
+Görev erişimi sunucuda oturum sahibine göre belirlenir. Liste, Kanban, Takvim ve doğrudan görev bağlantıları aynı sahiplik sınırını kullanır. Eski görevlere otomatik sahip atanmaz. Fotoğraf erişimi de hesap sahibine özeldir. JPEG veya PNG yüklemeleri 2 MiB ve her boyutta 2048 piksel ile sınırlandırılır. Doğrulanan görüntü yeniden kodlanıp PostgreSQL'de saklanır.
 
-Liste, Pano ve Takvim araç çubukları ortak kontrol ölçüleri ve daha sıkı boşluklar kullanır. Kanban kartları görev kodunu, başlığı, önceliği ve teslim tarihini koruyan kompakt düzendedir; başlık görev detayını açar. Durum seçicisi daha dar, klavyeyle kullanılabilir ve dokunma için en az 44 piksel yüksekliğindedir. Masaüstünde her sütunun görev alanı bağımsız kaydırılırken başlığı görünür kalır; bu alanlara Tab ile odaklanabilirsiniz. Mobilde sütunlar alt alta ve sayfayla birlikte kayar. Açık/koyu tema, filtre adresleri ve görünüm tercihleri korunur.
+## Yerel kurulum
 
-UI Refinements V2 ile Kanban kartlarının kodu ve önceliği üstte, başlığı ortada, teslim tarihi ve küçük durum seçicisi ortak alt satırdadır. Alan daraldığında alt satır taşmadan sarılır. Native seçici ikincil görsel ağırlık taşır; dokunma alanı ve klavye odağı korunur. Sütun kaydırma çubukları açık/koyu temaya uyum sağlar.
+1. Bu depoyu klonlayın. Rider'da depo içindeki **WorkFlow.Mvc.csproj** dosyasını açın ve .NET 10 SDK'yı seçin.
+2. PostgreSQL 17'yi yerel olarak çalıştırın. Docker ile yeni kurulumda, Git dışındaki **.local-checkpoints/postgres.env** dosyasına **POSTGRES_DB**, **POSTGRES_USER** ve **POSTGRES_PASSWORD** değerlerini ekleyin. Geliştirme örneğinde veritabanı **workflow_db**, rol **workflow_user** ve yerel port **5433**. Yeni konteyneri bir kez oluşturun:
 
-## Görev Takvimi V1.2
+   ~~~powershell
+   docker run -d --name workflow-postgres --env-file .local-checkpoints/postgres.env --publish 127.0.0.1:5433:5432 --mount source=workflow-pgdata,target=/var/lib/postgresql/data postgres:17
+   ~~~
 
-Menüdeki **Takvim** bağlantısı `/Calendar` sayfasını açar. Varsayılan görünüm **Ay**dır; **Gün / Hafta / Ay** bağlantıları, **Önceki / Bugün / Sonraki** kontrolleriyle tarih aralığını değiştirebilirsiniz. Görünüm tercihi tarayıcıda saklanır; URL'deki açık `view=day|week|month` seçimi önceliklidir. Arama, durum ve öncelik filtreleri tarih ve görünüm bağlamını korur.
+   Mevcut **workflow-postgres** konteyneriniz ve veritabanınız varsa bunları kullanın.
+3. **ConnectionStrings:WorkFlowDb** değerini projenin **User Secrets** yapılandırmasına ekleyin. PostgreSQL host, port, veritabanı, rol ve kendi parolanızı kullanın. Diğer çalışma ortamlarında bağlantıyı **ConnectionStrings__WorkFlowDb** üzerinden güvenli biçimde sağlayın.
+4. Geliştirme sertifikasını hazırlayın:
 
-Haftalar pazartesi başlar. Ay ızgarasındaki yoğun günlerde ilk üç görev gösterilir; kalanlar klavyeyle de açılabilen **+N görev** genişletme alanındadır. Görev kartları mevcut detay sayfasına gider. Teslim tarihi olmayan görevler ayrı bölümde, sayfalı olarak gösterilir; takvim günlerine yerleştirilmez. Bugün ve tamamlanmamış gecikmiş/yaklaşan görevler vurgulanır; tamamlananlar gecikmiş sayılmaz.
+   ~~~powershell
+   dotnet dev-certs https --trust
+   ~~~
 
-Ay görünümünde Pzt–Paz hafta başlıkları yedi sütunla hizalanır; gün hücrelerinde yalnız gün numarası gösterilir. Dar ekranda hafta düzeni korunur ve yalnız takvim alanı yatay kaydırılır. Önceki/sonraki ayın günleri daha soluk, bugünün numarası mor yuvarlak alanla belirtilir.
+5. Şema için aşağıdaki migration bölümünü uygulayın. Rider'da **WorkFlow.Mvc** için **.NET Project** Run Configuration seçin ve **ASPNETCORE_ENVIRONMENT=Development** ayarını kullanın. **Run** sonrasında terminalde bildirilen adresi açın. Varsayılan adres **https://localhost:5003**.
 
-V2 düzeninde ay dışı hücreler daha hafif arka plan, çerçeve ve tarih renkleriyle geri planda kalır; gün bağlantıları ve bu günlerdeki görevler kullanılmaya devam eder. Hücre boşlukları azaltılır; görevler ve erişilebilir açıklamaları soluklaştırılmaz.
+### EF Core migration kullanımı
 
-Görevler küçük öncelik işareti, görev kodu ve tek satırlık başlıkla gösterilir; uzun başlıklar üç noktayla kısalır. Tam başlık, öncelik ve durum klavye odağında, erişilebilir adda ve tooltip'te bulunur. Dört öncelik hafif renk tonlarıyla ayrılır; durum yalnız renkle anlatılmaz. Yoğun günlerin **+N görev** alanı kaydırılabilir; boş günlerde yalnız gün numarası gösterilir. Gün numarası ilgili Gün görünümünü, görev etiketi Details sayfasını açar. Hafta ve Gün görünümleri ayrıntılı kartları korur.
+Uygulama açılışta şema değişikliği yapmaz. Proje ile uyumlu **dotnet-ef 10.0.14** aracını kullanın. Hedef veritabanını doğrulayın ve SQL'i önce gözden geçirin:
 
-Takvim tarih alanı **GG.AA.YYYY** biçimindedir (örneğin `18.11.2026`). Native tarih alanının tarayıcı diline bağlı gösterimi yerine açıklamalı metin alanı ve sunucuda kesin biçim doğrulaması kullanılır; JavaScript kapalıyken de çalışır. Mevcut `yyyy-MM-dd` URL bağlantıları desteklenmeye devam eder. Tarih, arama, durum ve öncelik alanları dar ekranlara uyarlanan kompakt araç çubuğundadır.
+~~~powershell
+$env:ASPNETCORE_ENVIRONMENT = 'Development'
+dotnet ef migrations list --project WorkFlow.Mvc.csproj
+dotnet ef migrations script --idempotent --project WorkFlow.Mvc.csproj
+~~~
 
-Tarih aralıkları İstanbul yerel günlerinden mevcut `TaskDates` dönüşümleriyle UTC'ye çevrilir. Veritabanı sorgusu başlangıç dahil, bitiş hariç aralık kullanır; kayıtların UTC teslim tarihleri doğru yerel güne gruplanır. Seçili tarihler mevcut form sınırlarıyla uyumlu olarak 1900–9998 yılları arasındadır. Takvim V1 yalnız okur; takvimden sürükleyerek teslim tarihi değiştirme içermez ve yeni migration gerektirmez.
+Yeni ve boş bir yerel veritabanını hazırlamak için **dotnet ef database update --project WorkFlow.Mvc.csproj** komutunu kullanabilirsiniz. Mevcut veri içeren bir veritabanında önce tam yedek alın, geri yüklemeyi ayrı bir kopyada doğrulayın ve migration'ı o kopyada deneyin. Identity şemasını eklemek ve eski görevleri hesaplara bağlamak ayrı işlemlerdir. [Geçiş planı](Docs/AuthenticationRollout.md) ayrıntıları açıklar.
 
-## Kullanıcı hesabı ve görev sahipliği
+## Test ve sunum
 
-ASP.NET Core Identity ile `/Account/Register` üzerinden kayıt, `/Account/Login` üzerinden giriş ve CSRF korumalı POST formuyla çıkış kullanılır. Parolalar Identity'nin yerleşik hash mekanizmasıyla saklanır; en az 12 karakter, büyük/küçük harf, rakam ve özel karakter gerekir. Beş başarısız deneme hesabı 15 dakika kilitler. Giriş hata mesajı hesap bulunup bulunmadığını açıklamaz.
+~~~powershell
+dotnet build -c Release
+dotnet build Tests/WorkFlow.Stage1Checks/WorkFlow.Stage1Checks.csproj -c Release
+dotnet Tests/WorkFlow.Stage1Checks/bin/Release/net10.0/WorkFlow.Stage1Checks.dll
+~~~
 
-Kimlik doğrulama cookie'si Secure, HttpOnly ve SameSite=Lax kullanır; oturum süresi 30 dakikadır ve otomatik kaydırılmaz. Güvenlik damgası beş dakikada bir doğrulanır. Giriş/kayıt dahil MVC işlemleri HTTPS gerektirir. Yerel denemede uygun geliştirme sertifikasıyla `dotnet run --urls https://localhost:5001` kullanılabilir; sertifika güveni yerel ortamda ayrıca hazırlanmalıdır. Üretimde geçerli HTTPS ve kalıcı Data Protection anahtar yönetimi gerekir.
+Son komut veritabanı gerektirmeyen kontrolleri çalıştırır. PostgreSQL, HTTPS ve Chrome regresyonları için [izole test yönergelerini](Tests/README.md) kullanın. Yazma testleri ayrı bir test veritabanı ve kısıtlı rol gerektirir. Canlı veya normal geliştirme veritabanı yazma testi hedefi olarak kullanılmaz.
 
-Görev listesi, özet, CRUD, Kanban ve Takvim sunucuda kullanıcı kimliğiyle sınırlandırılır. Başka kullanıcıya ait görev kimliği bilinmesi erişim sağlamaz. Eski görevlerin sahibi otomatik atanmaz; sahipsiz görevler yeni hesaplara gösterilmez. `Project` bu aşamada yalnız ekran adıdır.
+Geliştirme verilerinden ayrı bir sunum hazırlamak için [izole HTTPS demo rehberine](Docs/PresentationDemo.md) bakın. Demo veritabanının şeması çalıştırılan sürümle eşleşmelidir. Parolaları, bağlantı dizelerini, sertifikaları, yedekleri ve yerel kontrol dosyalarını Git dışında tutun.
 
-**Canlı `workflow_db` için Identity migration'ı bu geliştirme sırasında uygulanmaz.** Yeni sürüm kullanılmadan önce şema değişikliği ve eski görevlerin sahipliği için [geçiş planı](Docs/AuthenticationRollout.md) incelenip ayrı onay verilmelidir. Uygulama başlangıcında otomatik migration yoktur. İlk doğrulama yalnız izole test ortamında yapılır.
+## Sonraki geliştirme başlıkları
 
-Bu aşamada e-posta gönderimi/doğrulaması, parola sıfırlama ve çok faktörlü kimlik doğrulama ekranları yoktur; kayıt sonrası oturum açılır. Üretime çıkış politikası belirlenirken bu kapsam dikkate alınmalıdır.
+- Birden çok proje, ekip üyeliği ve görev atama
+- Görev yorumları ve değişiklik geçmişi
+- E-posta doğrulama, parola sıfırlama ve çok faktörlü kimlik doğrulama
 
-## Proje Mimarisi
-
-Uygulama, ASP.NET Core MVC mimarisine uygun olarak katmanlara ayrılmıştır.
-
-| Katman | Açıklama |
-|---|---|
-| Models | Görev ve proje verilerini temsil eder. |
-| Views | Kullanıcının etkileşim kurduğu web sayfalarını oluşturur. |
-| Controllers | HTTP isteklerini karşılar ve uygulama akışını yönetir. |
-| Services | Görev yönetimiyle ilgili iş kurallarını uygular. |
-| Interfaces | Servislerin uyması gereken sözleşmeleri tanımlar. |
-| ViewModels | Form verilerini ve doğrulama kurallarını yönetir. |
-| Enums | Görev önceliği ve durum değerlerini tanımlar. |
-| Exceptions | Uygulamaya özgü hata durumlarını temsil eder. |
-
-## Kurulum ve Çalıştırma
-
-Yerel HTTPS sunumu için [izole demo başlatma ve sunum adımları](Docs/PresentationDemo.md) sayfasına bakın.
-
-Projeyi çalıştırabilmek için bilgisayarınızda **.NET 10 SDK** ve erişilebilir bir **PostgreSQL** veritabanı olmalıdır. Mevcut çalışma düzeninde MVC ve Console, `RiderProjects` altında kardeş klasörlerdir.
-
-1. Repository'yi bilgisayarınıza klonlayın:
-
-   ```bash
-   git clone https://github.com/fmervekilicarslan/WorkFlow.Console.git
-   ```
-
-2. Proje klasörüne geçin:
-
-   ```bash
-   cd WorkFlow.Console
-   ```
-
-3. MVC uygulamasını başlatın:
-
-   ```bash
-   dotnet run --project WorkFlow.Mvc.csproj
-   ```
-
-4. Terminalde belirtilen yerel adresi tarayıcıda açın.
-
-Çalıştırmadan önce `ConnectionStrings:WorkFlowDb` bağlantısı User Secrets veya `ConnectionStrings__WorkFlowDb` ortam değişkeni üzerinden tanımlanmalıdır. Parola ve bağlantı bilgilerini kaynak dosyalarına veya Git'e eklemeyin. `dotnet run` migration uygulamaz; mevcut veritabanında şema değişikliği yapmadan önce yedek ve açık kullanıcı onayı gerekir.
-
-## Veri Saklama
-
-Görevler, `WorkFlowDbContext` üzerinden PostgreSQL `Tasks` tablosunda saklanır; uygulama kapatıldığında korunur. `TaskService` görev işlemlerini ve sorguları yürütür. `Project` sınıfı şu anda yalnızca arayüzdeki proje adını taşır.
-
-Görevlerin `Guid` kimliği korunur. Kullanıcıya gösterilen `WF-001` biçimindeki kodlar veritabanı sequence'i üzerinden üretilir; silinen numaralar yeniden kullanılmaz.
-
-## Doğrulama
-
-Release derlemesi için `dotnet build -c Release` kullanılır. Bağlantısız kontroller ve canlı veriden ayrı PostgreSQL/HTTP testleri için [test yönergelerini](Tests/README.md) izleyin. Test bağlantıları uygulamanın bağlantısından ayrıdır; canlı `workflow_db` yazma testlerinde kullanılmaz. Mobil görünüm, tema, gezinme ve klavye etkileşimleri ayrıca tarayıcıda kontrol edilir.
-
-## Geliştirme Durumu
-
-WorkFlow, yazılım geliştirme stajı kapsamında üzerinde çalışılmaya devam edilen bir öğrenme ve uygulama projesidir.
-
-Projenin geliştirilmesi sırasında MVC mimarisi, Dependency Injection, servis katmanı, HTTP istekleri ve Git sürüm kontrolü gibi konular üzerinde çalışılmaktadır.
+Bu başlıklar mevcut kişisel görev alanında henüz kullanılabilir değildir.

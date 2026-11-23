@@ -64,12 +64,33 @@ internal static class TestDatabase
         async Task<string> Scalar(string sql)
         { await using var cmd = new NpgsqlCommand(sql, raw); return (await cmd.ExecuteScalarAsync())?.ToString() ?? ""; }
         const string SnapshotSql = "SELECT COALESCE(jsonb_agg(to_jsonb(t) - 'OwnerId' ORDER BY t.\"Id\"), '[]'::jsonb)::text FROM \"Tasks\" t";
+        const string UsersSnapshotSql = """
+            SELECT CASE WHEN to_regclass('public."AspNetUsers"') IS NULL THEN 'missing' ELSE 'present' END
+            """;
+        const string LegacyUserFieldsSql = """
+            SELECT COALESCE(jsonb_agg(to_jsonb(u) - ARRAY['AboutMe','JoinedAtUtc','PhotoData','PhotoKey'] ORDER BY u."Id"), '[]'::jsonb)::text FROM "AspNetUsers" u
+            """;
         const string SequenceSql = "SELECT last_value::text || ':' || is_called::text FROM \"TaskCodeSequence\"";
         var original = await Scalar(SnapshotSql);
+        var existingIdentity = await Scalar(UsersSnapshotSql) == "present";
+        var legacyUserId = Guid.NewGuid().ToString("N");
+        string? accountsBefore = null;
+        var legacyUserInserted = false;
         var id = Guid.NewGuid(); var marker = "AUTH-MIGRATION-" + id.ToString("N");
         var inserted = false;
         try
         {
+            if (existingIdentity)
+            {
+                await using var insertUser = new NpgsqlCommand("""
+                    INSERT INTO "AspNetUsers" ("Id","UserName","EmailConfirmed","PhoneNumberConfirmed","TwoFactorEnabled","LockoutEnabled","AccessFailedCount")
+                    VALUES (@id,'legacy-profile-fixture',false,false,false,false,0)
+                    """, raw);
+                insertUser.Parameters.AddWithValue("id", legacyUserId);
+                await insertUser.ExecuteNonQueryAsync();
+                legacyUserInserted = true;
+                accountsBefore = await Scalar(LegacyUserFieldsSql);
+            }
             await using (var insert = new NpgsqlCommand("INSERT INTO \"Tasks\" (\"Id\",\"Title\",\"Description\",\"Status\",\"Priority\",\"CreatedDate\",\"DueDate\") VALUES (@id,@title,@description,1,3,@created,@due)", raw))
             {
                 insert.Parameters.AddWithValue("id", id); insert.Parameters.AddWithValue("title", marker);
@@ -82,6 +103,14 @@ internal static class TestDatabase
             using (var db = Open()) await db.Database.MigrateAsync();
             Check(await Scalar(SnapshotSql) == legacySnapshot, "every pre-existing task field, Guid, permanent code and timestamp survives Identity migration");
             Check(await Scalar(SequenceSql) == sequence, "Identity migration leaves task sequence unchanged");
+            if (legacyUserInserted)
+            {
+                Check(await Scalar(LegacyUserFieldsSql) == accountsBefore, "profile migration preserves all original Identity fields");
+                using var db = Open();
+                var legacyUser = await db.Users.AsNoTracking().SingleAsync(u => u.Id == legacyUserId);
+                Check(legacyUser is { AboutMe: null, JoinedAtUtc: null, PhotoData: null, PhotoKey: null },
+                    "existing account gets no manufactured membership date or photo");
+            }
             string legacyCode;
             using (var db = Open())
             {
@@ -104,6 +133,12 @@ internal static class TestDatabase
         }
         finally
         {
+            if (legacyUserInserted)
+            {
+                await using var deleteUser = new NpgsqlCommand("DELETE FROM \"AspNetUsers\" WHERE \"Id\"=@id AND \"UserName\"='legacy-profile-fixture'", raw);
+                deleteUser.Parameters.AddWithValue("id", legacyUserId);
+                await deleteUser.ExecuteNonQueryAsync();
+            }
             if (inserted)
             {
                 await using var delete = new NpgsqlCommand("DELETE FROM \"Tasks\" WHERE \"Id\"=@id AND \"Title\"=@title", raw);

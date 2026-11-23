@@ -1,8 +1,10 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WorkFlow.Mvc.Models;
+using WorkFlow.Mvc.Services;
 using WorkFlow.Mvc.ViewModels;
 
 namespace WorkFlow.Mvc.Controllers;
@@ -42,7 +44,7 @@ public sealed class AccountController(UserManager<ApplicationUser> users, SignIn
         model.ReturnUrl = SafeReturnUrl(model.ReturnUrl);
         if (!ModelState.IsValid) return View(model);
         var email = model.Email.Trim();
-        var user = new ApplicationUser { UserName = email, Email = email };
+        var user = new ApplicationUser { UserName = email, Email = email, JoinedAtUtc = DateTimeOffset.UtcNow };
         IdentityResult result;
         try { result = await users.CreateAsync(user, model.Password); }
         catch (DbUpdateException)
@@ -65,7 +67,7 @@ public sealed class AccountController(UserManager<ApplicationUser> users, SignIn
     public async Task<IActionResult> Logout()
     {
         await signIn.SignOutAsync();
-        return RedirectToAction(nameof(Login));
+        return RedirectToAction(nameof(HomeController.Index), "Home");
     }
 
     [HttpGet]
@@ -73,8 +75,7 @@ public sealed class AccountController(UserManager<ApplicationUser> users, SignIn
     {
         var user = await users.GetUserAsync(User);
         if (user is null) return Challenge();
-        ViewData["SavedDisplayName"] = user.DisplayName;
-        return View(new ProfileViewModel { Email = user.Email ?? string.Empty, DisplayName = user.DisplayName });
+        return View(PrepareProfile(user, new ProfileViewModel { DisplayName = user.DisplayName, AboutMe = user.AboutMe }));
     }
 
     [HttpPost]
@@ -83,11 +84,11 @@ public sealed class AccountController(UserManager<ApplicationUser> users, SignIn
     {
         var user = await users.GetUserAsync(User);
         if (user is null) return Challenge();
-        model.Email = user.Email ?? string.Empty;
-        ViewData["SavedDisplayName"] = user.DisplayName;
+        PrepareProfile(user, model);
         if (!ModelState.IsValid) return View(model);
 
         user.DisplayName = string.IsNullOrWhiteSpace(model.DisplayName) ? null : model.DisplayName.Trim();
+        user.AboutMe = string.IsNullOrWhiteSpace(model.AboutMe) ? null : model.AboutMe.Trim();
         var result = await users.UpdateAsync(user);
         if (!result.Succeeded)
         {
@@ -96,8 +97,77 @@ public sealed class AccountController(UserManager<ApplicationUser> users, SignIn
         }
 
         await signIn.RefreshSignInAsync(user);
-        TempData["Success"] = "Görünen adınız güncellendi.";
+        TempData["Success"] = "Profiliniz güncellendi.";
         return RedirectToAction(nameof(Profile));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Photo(Guid id)
+    {
+        var user = await users.GetUserAsync(User);
+        if (user is null || user.PhotoKey != id || user.PhotoData is not { Length: > 0 })
+            return NotFound();
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        return File(user.PhotoData, "image/jpeg");
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(ProfilePhoto.MaxRequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ProfilePhoto.MaxRequestBytes)]
+    public async Task<IActionResult> UploadPhoto(IFormFile? photo, CancellationToken cancellationToken)
+    {
+        var user = await users.GetUserAsync(User);
+        if (user is null) return Challenge();
+
+        var normalized = await ProfilePhoto.NormalizeAsync(photo, cancellationToken);
+        if (normalized is null)
+        {
+            TempData["Error"] = "En fazla 2 MB boyutunda, geçerli bir JPEG veya PNG seçin. Genişlik ve yükseklik en fazla 2048 piksel olabilir.";
+            return RedirectToAction(nameof(Profile));
+        }
+        user.PhotoKey = Guid.NewGuid();
+        user.PhotoData = normalized;
+        return await SavePhotoAsync(user, "Profil fotoğrafınız güncellendi.");
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemovePhoto()
+    {
+        var user = await users.GetUserAsync(User);
+        if (user is null) return Challenge();
+        if (user.PhotoKey is null) return RedirectToAction(nameof(Profile));
+        user.PhotoKey = null;
+        user.PhotoData = null;
+        return await SavePhotoAsync(user, "Profil fotoğrafınız kaldırıldı.");
+    }
+
+    private async Task<IActionResult> SavePhotoAsync(ApplicationUser user, string success)
+    {
+        if ((await users.UpdateAsync(user)).Succeeded)
+        {
+            await signIn.RefreshSignInAsync(user);
+            TempData["Success"] = success;
+        }
+        else
+        {
+            TempData["Error"] = "Profil fotoğrafı kaydedilemedi. Lütfen tekrar deneyin.";
+        }
+        return RedirectToAction(nameof(Profile));
+    }
+
+    private ProfileViewModel PrepareProfile(ApplicationUser user, ProfileViewModel model)
+    {
+        ViewData["SavedDisplayName"] = user.DisplayName;
+        model.Email = user.Email ?? string.Empty;
+        model.JoinedAtUtc = user.JoinedAtUtc;
+        model.PhotoKey = user.PhotoKey;
+        var words = user.DisplayName?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        model.Initials = words is { Length: > 0 }
+            ? string.Concat(words.Take(2).Select(word => StringInfo.GetNextTextElement(word))).ToUpperInvariant()
+            : (model.Email.Length > 0 ? StringInfo.GetNextTextElement(model.Email).ToUpperInvariant() : "?");
+        return model;
     }
 
     [HttpGet]
